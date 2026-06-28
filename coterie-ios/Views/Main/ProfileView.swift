@@ -101,18 +101,14 @@ struct ProfileView: View {
     private var appearanceSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             sectionLabel("Appearance").padding(.top, 34)
-            segmentRow("Backdrop",
-                       options: BackdropTone.allCases.map(\.rawValue),
-                       selected: app.backdrop.rawValue) { raw in
-                if let t = BackdropTone(rawValue: raw) { app.backdrop = t }
+            segmentRow("Theme",
+                       options: AppearanceMode.allCases.map(\.rawValue),
+                       selected: app.appearance.rawValue) { raw in
+                if let m = AppearanceMode(rawValue: raw) {
+                    withAnimation(.easeInOut(duration: 0.35)) { app.appearance = m }
+                }
             }
             .padding(.top, 16)
-            segmentRow("Portraits",
-                       options: PortraitMood.allCases.map(\.rawValue),
-                       selected: app.mood.rawValue) { raw in
-                if let m = PortraitMood(rawValue: raw) { app.mood = m }
-            }
-            .padding(.top, 14)
         }
     }
 
@@ -171,7 +167,7 @@ struct ProfileView: View {
                 }
             }
             .padding(4)
-            .background(Color.black.opacity(0.05))
+            .background(CT.fill)
             .clipShape(Capsule())
         }
     }
@@ -214,6 +210,6 @@ struct TagPill: View {
         Text(text)
             .font(.grotesk(11)).tracking(1.1).textCase(.uppercase).foregroundStyle(CT.ink70)
             .padding(.horizontal, 15).padding(.vertical, 8)
-            .overlay(Capsule().stroke(Color.black.opacity(0.16), lineWidth: 1))
+            .overlay(Capsule().stroke(CT.border, lineWidth: 1))
     }
 }

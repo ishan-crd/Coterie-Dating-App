@@ -164,7 +164,7 @@ struct TodayView: View {
             .frame(maxWidth: .infinity).padding(.vertical, 16)
             .background(filled ? CT.ink : CT.paper)
             .clipShape(Capsule())
-            .overlay(filled ? nil : Capsule().stroke(Color.black.opacity(0.2), lineWidth: 1))
+            .overlay(filled ? nil : Capsule().stroke(CT.borderStrong, lineWidth: 1))
     }
 
     // MARK: Done
@@ -184,7 +184,7 @@ struct TodayView: View {
         .frame(maxWidth: .infinity).frame(height: 430)
         .padding(40)
         .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous)
-            .stroke(Color.black.opacity(0.1), lineWidth: 1))
+            .stroke(CT.border, lineWidth: 1))
     }
 }
 

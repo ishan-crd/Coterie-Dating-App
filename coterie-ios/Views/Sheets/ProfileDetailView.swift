@@ -125,6 +125,6 @@ struct ProfileDetailView: View {
             .frame(maxWidth: .infinity).padding(.vertical, 16)
             .background(filled ? CT.ink : CT.paper)
             .clipShape(Capsule())
-            .overlay(filled ? nil : Capsule().stroke(Color.black.opacity(0.2), lineWidth: 1))
+            .overlay(filled ? nil : Capsule().stroke(CT.borderStrong, lineWidth: 1))
     }
 }

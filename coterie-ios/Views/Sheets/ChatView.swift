@@ -91,7 +91,7 @@ struct ChatView: View {
                 .font(.grotesk(15)).lineSpacing(2)
                 .foregroundStyle(msg.fromMe ? .white : CT.ink90)
                 .padding(.horizontal, 16).padding(.vertical, 11)
-                .background(msg.fromMe ? CT.ink : Color(hex: "F0EEEA"))
+                .background(msg.fromMe ? CT.ink : CT.bubbleThem)
                 .clipShape(BubbleShape(fromMe: msg.fromMe))
             if !msg.fromMe { Spacer(minLength: 50) }
         }
@@ -101,7 +101,7 @@ struct ChatView: View {
         HStack {
             TypingDots()
                 .padding(.horizontal, 16).padding(.vertical, 14)
-                .background(Color(hex: "F0EEEA"))
+                .background(CT.bubbleThem)
                 .clipShape(BubbleShape(fromMe: false))
             Spacer(minLength: 50)
         }
@@ -114,9 +114,9 @@ struct ChatView: View {
             TextField("Write something considered…", text: $draft)
                 .font(.grotesk(15)).tint(CT.ink)
                 .padding(.horizontal, 18).padding(.vertical, 13)
-                .background(Color.white)
+                .background(CT.surface)
                 .clipShape(Capsule())
-                .overlay(Capsule().stroke(Color.black.opacity(0.12), lineWidth: 1))
+                .overlay(Capsule().stroke(CT.border, lineWidth: 1))
                 .onSubmit(sendDraft)
             Button(action: sendDraft) {
                 Image(systemName: "arrow.up").font(.system(size: 17, weight: .semibold))

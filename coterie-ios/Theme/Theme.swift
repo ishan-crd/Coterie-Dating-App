@@ -30,35 +30,47 @@ extension Color {
     }
 }
 
+extension Color {
+    /// A colour that resolves differently in light and dark appearance.
+    static func dyn(_ light: Color, _ dark: Color) -> Color {
+        Color(UIColor { trait in
+            trait.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light)
+        })
+    }
+}
+
+/// Semantic colour tokens. Every value adapts to light / dark appearance, so
+/// switching the app theme flips the whole chrome automatically. Portraits and
+/// the text laid over them stay as-is — they read as photographs in both modes.
 enum CT {
     // Surfaces
-    static let paper = Color(hex: "FBFAF8")        // primary surface
-    static let ink = Color(hex: "0B0B0B")          // primary text / buttons
+    static let paper   = Color.dyn(Color(hex: "FBFAF8"), Color(hex: "100F0D"))  // primary surface
+    static let surface = Color.dyn(Color(hex: "FFFFFF"), Color(hex: "1C1B18"))  // lifted fields/cards
+    static let ink     = Color.dyn(Color(hex: "0B0B0B"), Color(hex: "F4F1EC"))  // primary text / buttons
 
     // Text tones
-    static let ink90 = Color(hex: "16140F")
-    static let ink80 = Color(hex: "1A1814")
-    static let ink70 = Color(hex: "2A2823")
-    static let body = Color(hex: "56534E")
-    static let bodyLight = Color(hex: "76736E")
-    static let muted = Color(hex: "9A9792")
-    static let faint = Color(hex: "B6B3AE")
-    static let fainter = Color(hex: "C2BFBA")
-    static let tabIdle = Color(hex: "BCB9B4")
+    static let ink90     = Color.dyn(Color(hex: "16140F"), Color(hex: "ECE8E2"))
+    static let ink80     = Color.dyn(Color(hex: "1A1814"), Color(hex: "E2DED7"))
+    static let ink70     = Color.dyn(Color(hex: "2A2823"), Color(hex: "D2CEC6"))
+    static let body      = Color.dyn(Color(hex: "56534E"), Color(hex: "ADA89F"))
+    static let bodyLight = Color.dyn(Color(hex: "76736E"), Color(hex: "948F86"))
+    static let muted     = Color.dyn(Color(hex: "9A9792"), Color(hex: "7B776F"))
+    static let faint     = Color.dyn(Color(hex: "B6B3AE"), Color(hex: "615D57"))
+    static let fainter   = Color.dyn(Color(hex: "C2BFBA"), Color(hex: "4D4A45"))
+    static let tabIdle   = Color.dyn(Color(hex: "BCB9B4"), Color(hex: "5A5650"))
 
-    static let hairline = Color.black.opacity(0.08)
-    static let hairlineSoft = Color.black.opacity(0.06)
+    // Lines, borders & fills
+    static let hairline     = Color.dyn(.black.opacity(0.08), .white.opacity(0.12))
+    static let hairlineSoft = Color.dyn(.black.opacity(0.06), .white.opacity(0.09))
+    static let border       = Color.dyn(.black.opacity(0.16), .white.opacity(0.20))
+    static let borderStrong = Color.dyn(.black.opacity(0.20), .white.opacity(0.26))
+    static let fill         = Color.dyn(.black.opacity(0.06), .white.opacity(0.10))
+    static let disabledFill = Color.dyn(.black.opacity(0.07), .white.opacity(0.10))
+    static let disabledInk  = Color.dyn(.black.opacity(0.32), .white.opacity(0.30))
 
-    // Warm paper backdrop gradient (root behind the app)
-    static func rootBackground(_ tone: BackdropTone) -> LinearGradient {
-        let stops: [Color]
-        switch tone {
-        case .warm:    stops = [Color(hex: "f1eee9"), Color(hex: "e5e1db"), Color(hex: "d6d2cb")]
-        case .neutral: stops = [Color(hex: "f0efed"), Color(hex: "e6e5e2"), Color(hex: "d8d7d4")]
-        case .cool:    stops = [Color(hex: "edeef0"), Color(hex: "e1e3e6"), Color(hex: "d2d5d9")]
-        }
-        return LinearGradient(colors: stops, startPoint: .top, endPoint: .bottom)
-    }
+    // Component-specific surfaces
+    static let bubbleThem = Color.dyn(Color(hex: "F0EEEA"), Color(hex: "262320"))
+    static let photoEmpty = Color.dyn(Color(hex: "F1EFEB"), Color(hex: "211F1D"))
 }
 
 // MARK: - Typography
@@ -91,8 +103,10 @@ extension View {
 
 // MARK: - Atmosphere settings
 
-enum BackdropTone: String, CaseIterable, Codable {
-    case warm = "Warm", neutral = "Neutral", cool = "Cool"
+/// The user-selectable app theme.
+enum AppearanceMode: String, CaseIterable, Codable {
+    case light = "Light", dark = "Dark"
+    var colorScheme: ColorScheme { self == .dark ? .dark : .light }
 }
 
 enum PortraitMood: String, CaseIterable, Codable {
@@ -201,20 +215,20 @@ struct PillButton: View {
 
     private var foreground: Color {
         switch style {
-        case .filled:  return enabled ? CT.paper : Color.black.opacity(0.32)
+        case .filled:  return enabled ? CT.paper : CT.disabledInk
         case .outline, .ghost: return CT.ink
         }
     }
     private var background: Color {
         switch style {
-        case .filled:  return enabled ? CT.ink : Color.black.opacity(0.07)
-        case .outline: return CT.paper
+        case .filled:  return enabled ? CT.ink : CT.disabledFill
+        case .outline: return CT.surface
         case .ghost:   return .clear
         }
     }
     @ViewBuilder private var border: some View {
         if style == .outline {
-            Capsule().stroke(Color.black.opacity(0.2), lineWidth: 1)
+            Capsule().stroke(CT.borderStrong, lineWidth: 1)
         }
     }
 }
@@ -245,10 +259,10 @@ struct ChoiceChip: View {
                 .foregroundStyle(selected ? CT.paper : CT.ink80)
                 .padding(.horizontal, hPad)
                 .padding(.vertical, vPad)
-                .background(selected ? CT.ink : CT.paper)
+                .background(selected ? CT.ink : CT.surface)
                 .clipShape(Capsule())
                 .overlay(
-                    Capsule().stroke(selected ? CT.ink : Color.black.opacity(0.16), lineWidth: 1)
+                    Capsule().stroke(selected ? CT.ink : CT.border, lineWidth: 1)
                 )
         }
         .buttonStyle(PressableStyle(scale: 0.96))
@@ -271,11 +285,11 @@ struct ChoiceRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 18)
                 .padding(.vertical, 15)
-                .background(selected ? CT.ink : CT.paper)
+                .background(selected ? CT.ink : CT.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(selected ? CT.ink : Color.black.opacity(0.14), lineWidth: 1)
+                        .stroke(selected ? CT.ink : CT.border, lineWidth: 1)
                 )
         }
         .buttonStyle(PressableStyle(scale: 0.99))
@@ -301,7 +315,7 @@ struct UnderlineField: View {
                 .keyboardType(keyboard)
                 .autocorrectionDisabled()
             Rectangle()
-                .fill(Color.black.opacity(0.18))
+                .fill(CT.border)
                 .frame(height: 1)
         }
     }

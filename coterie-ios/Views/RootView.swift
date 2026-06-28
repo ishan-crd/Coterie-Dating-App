@@ -30,5 +30,7 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.5), value: app.stage)
+        .preferredColorScheme(app.appearance.colorScheme)
+        .animation(.easeInOut(duration: 0.35), value: app.appearance)
     }
 }

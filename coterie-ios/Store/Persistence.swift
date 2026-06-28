@@ -11,8 +11,7 @@ import Foundation
 struct StoredSettings: Codable {
     var notifications: Bool
     var paused: Bool
-    var backdrop: BackdropTone
-    var mood: PortraitMood
+    var appearance: AppearanceMode
 }
 
 enum Persistence {

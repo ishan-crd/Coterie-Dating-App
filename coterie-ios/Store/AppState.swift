@@ -44,8 +44,9 @@ final class AppState: ObservableObject {
     // MARK: Preferences (persisted)
     @Published var notifications = true { didSet { persistSettings() } }
     @Published var paused = false { didSet { persistSettings() } }
-    @Published var backdrop: BackdropTone = .warm { didSet { persistSettings() } }
-    @Published var mood: PortraitMood = .studio { didSet { persistSettings() } }
+    @Published var appearance: AppearanceMode = .light { didSet { persistSettings() } }
+    /// Portrait palette — fixed to Studio; no longer user-configurable.
+    let mood: PortraitMood = .studio
 
     private var verifyTask: Task<Void, Never>?
     private var replyTask: Task<Void, Never>?
@@ -68,6 +69,7 @@ final class AppState: ObservableObject {
     /// Test seams so screens can be inspected directly during development.
     private func applyPreviewLaunchArguments() {
         let args = ProcessInfo.processInfo.arguments
+        if args.contains("-previewDark") { appearance = .dark }
         if args.contains("-previewApp") {
             profile = .sample
             stage = .app
@@ -284,15 +286,14 @@ final class AppState: ObservableObject {
 
     private func persistSettings() {
         Persistence.saveSettings(.init(notifications: notifications, paused: paused,
-                                       backdrop: backdrop, mood: mood))
+                                       appearance: appearance))
     }
 
     private func loadSettings() {
         guard let s = Persistence.loadSettings() else { return }
         notifications = s.notifications
         paused = s.paused
-        backdrop = s.backdrop
-        mood = s.mood
+        appearance = s.appearance
     }
 }
 

@@ -79,7 +79,7 @@ struct WaitlistView: View {
                         .autocorrectionDisabled().textInputAutocapitalization(.never)
                 }
                 .overlay(alignment: .bottom) {
-                    Rectangle().fill(Color.black.opacity(0.18)).frame(height: 1).offset(y: 12)
+                    Rectangle().fill(CT.border).frame(height: 1).offset(y: 12)
                 }
             }
             .padding(.top, 26)

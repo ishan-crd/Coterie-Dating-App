@@ -81,7 +81,7 @@ struct InviteView: View {
                             .font(.grotesk(13))
                             .foregroundStyle(CT.ink)
                             .overlay(alignment: .bottom) {
-                                Rectangle().fill(Color.black.opacity(0.35)).frame(height: 1).offset(y: 3)
+                                Rectangle().fill(CT.ink.opacity(0.35)).frame(height: 1).offset(y: 3)
                             }
                     }
                 }
@@ -96,7 +96,7 @@ struct InviteView: View {
     }
 
     private var rule: some View {
-        Rectangle().fill(Color.black.opacity(0.25)).frame(width: 30, height: 1)
+        Rectangle().fill(CT.ink.opacity(0.25)).frame(width: 30, height: 1)
     }
 
     private func statusText(_ text: String, color: Color) -> some View {
@@ -141,7 +141,7 @@ struct InviteView: View {
         }
         .frame(width: 240)
         .overlay(alignment: .bottom) {
-            Rectangle().fill(Color.black.opacity(0.18)).frame(height: 1).offset(y: 14)
+            Rectangle().fill(CT.border).frame(height: 1).offset(y: 14)
         }
         .contentShape(Rectangle())
         .onTapGesture { focused = true }

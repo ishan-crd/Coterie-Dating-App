@@ -43,7 +43,7 @@ struct OnboardingView: View {
             }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.black.opacity(0.09))
+                    Capsule().fill(CT.fill)
                     Capsule().fill(CT.ink)
                         .frame(width: geo.size.width * progressFraction)
                 }
@@ -240,14 +240,14 @@ struct PhotoGrid: View {
                         } else {
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
                                 .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
-                                .foregroundStyle(Color.black.opacity(0.2))
+                                .foregroundStyle(CT.border)
                             Image(systemName: "plus")
                                 .font(.system(size: 20, weight: .regular))
-                                .foregroundStyle(Color.black.opacity(0.34))
+                                .foregroundStyle(CT.muted)
                         }
                     }
                     .aspectRatio(3.0/4.0, contentMode: .fit)
-                    .background(Color(hex: "F1EFEB"))
+                    .background(CT.photoEmpty)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
                 .buttonStyle(PressableStyle())
@@ -357,11 +357,11 @@ struct AnswerEditor: View {
                 .padding(.horizontal, 14).padding(.vertical, 10)
         }
         .frame(height: height)
-        .background(Color.white)
+        .background(CT.surface)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.black.opacity(0.14), lineWidth: 1)
+                .stroke(CT.border, lineWidth: 1)
         )
     }
 }
@@ -428,7 +428,7 @@ private struct ReviewStep: View {
             Text(p.interests.prefix(3).joined(separator: "   ·   "))
                 .serifItalic(18).foregroundStyle(CT.body).padding(.top, 18)
 
-            Rectangle().fill(Color.black.opacity(0.2)).frame(width: 34, height: 1)
+            Rectangle().fill(CT.border).frame(width: 34, height: 1)
                 .padding(.vertical, 26)
 
             Text("Your introduction is ready. From here, we’ll show you one person a day — and show you to a few who’ll be glad to know you.")

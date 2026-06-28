@@ -15,7 +15,6 @@ struct coterie_iosApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(app)
-                .preferredColorScheme(.light)
         }
     }
 }
