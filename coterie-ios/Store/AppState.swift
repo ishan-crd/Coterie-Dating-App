@@ -44,7 +44,7 @@ final class AppState: ObservableObject {
     // MARK: Preferences (persisted)
     @Published var notifications = true { didSet { persistSettings() } }
     @Published var paused = false { didSet { persistSettings() } }
-    @Published var appearance: AppearanceMode = .light { didSet { persistSettings() } }
+    @Published var appearance: AppearanceMode = .dark { didSet { persistSettings() } }
     /// Portrait palette — fixed to Studio; no longer user-configurable.
     let mood: PortraitMood = .studio
 
