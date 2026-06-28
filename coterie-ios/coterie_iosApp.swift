@@ -6,27 +6,16 @@
 //
 
 import SwiftUI
-import SwiftData
 
 @main
 struct coterie_iosApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    @StateObject private var app = AppState()
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environmentObject(app)
+                .preferredColorScheme(.light)
         }
-        .modelContainer(sharedModelContainer)
     }
 }
