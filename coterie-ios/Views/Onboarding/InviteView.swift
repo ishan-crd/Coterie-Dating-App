@@ -34,7 +34,7 @@ struct InviteView: View {
 
                 VStack(spacing: 0) {
                     LogoMark(height: 54)
-                    Text("Introductions, made with intention.")
+                    Text("Find friends who share your world.")
                         .serifItalic(18)
                         .foregroundStyle(CT.bodyLight)
                         .padding(.top, 14)

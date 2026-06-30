@@ -30,7 +30,7 @@ struct ProfileView: View {
 
                 PillButton(title: "Log Out", style: .outline) { app.logout() }
                     .padding(.top, 30)
-                Text("Coterie · By introduction only")
+                Text("Circle · Find your people")
                     .font(.grotesk(11)).tracking(2.0).textCase(.uppercase)
                     .foregroundStyle(CT.fainter)
                     .frame(maxWidth: .infinity).multilineTextAlignment(.center)
@@ -139,7 +139,7 @@ struct ProfileView: View {
             .overlay(alignment: .bottom) { Rectangle().fill(CT.hairlineSoft).frame(height: 1) }
             linkRow("Privacy & safety") {}
             linkRow("Help & support") {}
-            linkRow("About Coterie") {}
+            linkRow("About Circle") {}
         }
     }
 

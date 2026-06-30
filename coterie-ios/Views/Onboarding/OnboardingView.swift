@@ -84,7 +84,7 @@ struct OnboardingView: View {
     private var buttonLabel: String {
         switch step {
         case .welcome: return "Begin"
-        case .review:  return "Enter Coterie"
+        case .review:  return "Enter Circle"
         default:       return "Continue"
         }
     }
@@ -132,7 +132,7 @@ private struct WelcomeStep: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Invitation Accepted").eyebrow(CT.muted, tracking: 3.0)
                 .padding(.bottom, 22)
-            Text("Welcome to Coterie.").font(.serif(46)).lineSpacing(2)
+            Text("Welcome to Circle.").font(.serif(46)).lineSpacing(2)
             Text("You’ve been introduced by someone we trust. The next few moments shape how you’ll appear to others — there are no wrong answers, only honest ones.")
                 .font(.grotesk(15.5)).foregroundStyle(CT.body).lineSpacing(5)
                 .padding(.top, 20).frame(maxWidth: 300, alignment: .leading)

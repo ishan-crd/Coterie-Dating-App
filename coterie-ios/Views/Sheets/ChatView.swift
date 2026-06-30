@@ -61,7 +61,7 @@ struct ChatView: View {
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 10) {
-                    Text("Introduced by Coterie")
+                    Text("Connected through Circle")
                         .font(.grotesk(10.5, weight: .regular)).tracking(2.0).textCase(.uppercase)
                         .foregroundStyle(CT.faint).padding(.bottom, 12)
 

@@ -192,20 +192,18 @@ struct Grain: View {
 
 // MARK: - Brand
 
-/// The Coterie wordmark logo. Template-rendered so it adopts the theme colour
-/// (dark on light, light on dark).
+/// The Circle wordmark. Rendered as serif type so it adopts the theme colour
+/// and always reads the current name.
 struct LogoMark: View {
     var height: CGFloat
     var color: Color = CT.ink
 
     var body: some View {
-        Image("coterie-logo")
-            .renderingMode(.template)
-            .resizable()
-            .scaledToFit()
-            .frame(height: height)
+        Text("Circle")
+            .font(.serif(height * 1.05, weight: .medium))
+            .tracking(height * 0.04)
             .foregroundStyle(color)
-            .accessibilityLabel("Coterie")
+            .accessibilityLabel("Circle")
     }
 }
 
