@@ -29,9 +29,15 @@ final class AppState: ObservableObject {
     // MARK: The signed-in user
     @Published var profile = UserProfile()
 
-    // MARK: Daily introduction
-    @Published var revealed = false
-    @Published var dailyOutcome: DailyOutcome = .none
+    // MARK: Explore (friend discovery)
+    /// Topics the user is filtering by; empty means "everyone".
+    @Published var exploreTopics: Set<String> = []
+    @Published var passedIDs: Set<String> = []
+    @Published var likedIDs: Set<String> = []
+    /// Likes left today. Members get a fixed allowance that resets each day.
+    @Published var likesRemaining = AppState.dailyLikeLimit
+
+    static let dailyLikeLimit = 5
 
     // MARK: Conversations
     @Published var conversations: [String: Conversation] = [:]
@@ -55,6 +61,7 @@ final class AppState: ObservableObject {
 
     init() {
         loadSettings()
+        loadLikes()
         seedConversations()
         if let saved = Persistence.loadProfile(), saved.isComplete {
             profile = saved
@@ -215,17 +222,56 @@ final class AppState: ObservableObject {
         Persistence.saveProfile(profile)
     }
 
-    // MARK: - Daily introduction
+    // MARK: - Explore (friend discovery)
 
-    var dailyMatch: Member { CTData.member("margot")! }
+    /// People still to consider, filtered by the chosen topics. A person matches
+    /// when they share at least one of the selected interests (or when no topic
+    /// is selected, in which case everyone shows).
+    var exploreCandidates: [Member] {
+        CTData.members.filter { m in
+            guard !passedIDs.contains(m.id), !likedIDs.contains(m.id) else { return false }
+            guard !exploreTopics.isEmpty else { return true }
+            return !exploreTopics.isDisjoint(with: Set(m.interests))
+        }
+    }
 
-    func reveal() { withAnimation(.easeOut(duration: 1.0)) { revealed = true } }
+    /// The interests the user picked in onboarding — the topics they can filter by.
+    var myTopics: [String] { profile.interests }
 
-    func passDaily() { withAnimation { dailyOutcome = .passed } }
+    func toggleTopic(_ topic: String) {
+        if exploreTopics.contains(topic) { exploreTopics.remove(topic) }
+        else { exploreTopics.insert(topic) }
+    }
 
-    func introduceDaily() {
-        withAnimation { dailyOutcome = .introduced }
-        openChat(with: "margot", seeding: true)
+    func clearTopics() { exploreTopics.removeAll() }
+
+    /// Interests a candidate shares with the user, for the card's tags.
+    func sharedInterests(_ member: Member) -> [String] {
+        let mine = Set(profile.interests)
+        return member.interests.filter { mine.contains($0) }
+    }
+
+    func passMember(_ id: String) {
+        withAnimation(.easeOut(duration: 0.28)) { _ = passedIDs.insert(id) }
+    }
+
+    /// Like a person — costs one of the day's likes and quietly starts a
+    /// conversation (it shows up in Messages) without leaving the deck.
+    func likeMember(_ id: String) {
+        guard likesRemaining > 0, !likedIDs.contains(id) else { return }
+        withAnimation(.easeOut(duration: 0.28)) { _ = likedIDs.insert(id) }
+        likesRemaining -= 1
+        persistLikes()
+        if conversations[id] == nil {
+            conversations[id] = Conversation(id: id, preview: "You connected — say hello.",
+                                             time: "now", unread: false, messages: [])
+            conversationOrder.insert(id, at: 0)
+        }
+    }
+
+    /// Start over with everyone (e.g. after running through the deck).
+    func resetDeck() {
+        withAnimation { passedIDs.removeAll() }
     }
 
     // MARK: - Sheets & conversations
@@ -283,8 +329,9 @@ final class AppState: ObservableObject {
         verifying = false
         inviteError = false
         onboardingStep = 0
-        revealed = false
-        dailyOutcome = .none
+        exploreTopics = []
+        passedIDs = []
+        likedIDs = []
         activeSheet = nil
         tab = .today
         seedConversations()
@@ -325,13 +372,31 @@ final class AppState: ObservableObject {
         paused = s.paused
         appearance = s.appearance
     }
+
+    /// Today's date as a stable key for the daily-likes reset.
+    private var todayKey: String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date())
+    }
+
+    private func loadLikes() {
+        if let l = Persistence.loadLikes(), l.day == todayKey {
+            likesRemaining = l.remaining
+        } else {
+            likesRemaining = Self.dailyLikeLimit
+            persistLikes()
+        }
+    }
+
+    private func persistLikes() {
+        Persistence.saveLikes(.init(day: todayKey, remaining: likesRemaining))
+    }
 }
 
 // MARK: - Supporting types
 
 enum MainTab: Hashable { case today, gallery, invites, messages, profile }
-
-enum DailyOutcome { case none, passed, introduced }
 
 enum ActiveSheet: Identifiable {
     case profile(String)

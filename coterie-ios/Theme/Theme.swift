@@ -209,6 +209,34 @@ struct LogoMark: View {
     }
 }
 
+// MARK: - Pulsing rings
+
+/// Two expanding rings around a centre dot — a soft "listening / searching"
+/// ornament. Colour-configurable so it reads on both light surfaces and photos.
+struct PulseRings: View {
+    var color: Color = .white
+    var size: CGFloat = 70
+    @State private var animate = false
+
+    var body: some View {
+        ZStack {
+            ring(delay: 0)
+            ring(delay: 1.2)
+            Circle().fill(color).frame(width: size * 0.1, height: size * 0.1)
+        }
+        .frame(width: size, height: size)
+        .onAppear { animate = true }
+    }
+
+    private func ring(delay: Double) -> some View {
+        Circle().stroke(color.opacity(0.5), lineWidth: 1)
+            .scaleEffect(animate ? 1.7 : 0.7)
+            .opacity(animate ? 0 : 0.55)
+            .animation(.easeOut(duration: 2.4).repeatForever(autoreverses: false).delay(delay),
+                       value: animate)
+    }
+}
+
 // MARK: - Reusable building blocks
 
 /// The pill button used for primary / secondary actions throughout.

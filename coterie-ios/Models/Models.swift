@@ -116,7 +116,7 @@ extension UserProfile {
             PromptResponse(promptId: "sunday", answer: "A flea market at dawn, a long lunch, and absolutely no plans after."),
             PromptResponse(promptId: "alive", answer: "Knee-deep in cold water before the city is awake."),
         ]
-        p.interests = ["Architecture", "Film photography", "Natural wine", "Sailing"]
+        p.interests = ["Hiking", "Music", "Film", "Coffee"]
         return p
     }
 }
@@ -168,10 +168,11 @@ enum CTData {
         ("comfort", "My comfort meal is…"),
     ]
 
+    /// Shared-interest topics — the basis for finding friends.
     static let interests = [
-        "Film photography", "Architecture", "Natural wine", "Ceramics", "Vinyl",
-        "Open water", "Literature", "Jazz", "Hiking", "Cooking", "Cinema",
-        "Travel", "Tennis", "Design", "Sailing", "Pottery",
+        "Hiking", "Music", "Content creation", "Photography", "Cooking", "Gaming",
+        "Running", "Coffee", "Art", "Film", "Books", "Travel", "Yoga", "Cycling",
+        "Design", "Dancing", "Climbing", "Wine", "Sailing", "Surfing", "Gardening", "Vinyl",
     ]
 
     /// Look up a prompt's question text by id.
@@ -193,42 +194,42 @@ enum CTData {
                why: "You were both drawn to slow mornings, film photography, and the city of Lisbon.",
                prompts: [.init(q: "A perfect Sunday", a: "A flea market at dawn, a long lunch, no phone."),
                          .init(q: "I’ll fall for", a: "Someone who notices the small, deliberate things.")],
-               interests: ["Film photography", "Ceramics", "Natural wine", "Joan Didion"]),
+               interests: ["Photography", "Art", "Wine", "Hiking"]),
         Member(id: "elias", name: "Elias", age: 32, city: "Copenhagen", role: "Composer",
                portrait: .init(lx: 74, ly: 20),
                bio: "Writes for film and the occasional empty concert hall.",
                why: "A shared love of late records and quiet architecture.",
                prompts: [.init(q: "On repeat", a: "Arvo Pärt, and the hum of the city at 2am."),
                          .init(q: "We’ll get along if", a: "You can sit in a comfortable silence.")],
-               interests: ["Analog synths", "Sailing", "Brutalism", "Espresso"]),
+               interests: ["Music", "Sailing", "Coffee", "Vinyl"]),
         Member(id: "saoirse", name: "Saoirse", age: 29, city: "London", role: "Architect",
                portrait: .init(lx: 50, ly: 12),
                bio: "Designs quiet houses that let the light do the talking.",
                why: "Both of you listed Lisbon and long walks with no destination.",
                prompts: [.init(q: "The dream project", a: "A stone cabin on the Atlantic, off the grid."),
                          .init(q: "My weakness", a: "Good paper, bad coffee, worse puns.")],
-               interests: ["Sketching", "Open water", "Tea", "Tadao Ando"]),
+               interests: ["Design", "Hiking", "Running", "Books"]),
         Member(id: "cyrus", name: "Cyrus", age: 34, city: "New York", role: "Filmmaker",
                portrait: .init(lx: 70, ly: 80),
                bio: "Makes documentaries about people who build things by hand.",
                why: "A mutual fondness for old cameras and older jazz.",
                prompts: [.init(q: "Last great meal", a: "A stranger’s kitchen in Oaxaca."),
                          .init(q: "Find me", a: "In the last row of a repertory cinema.")],
-               interests: ["16mm film", "Vinyl", "Boxing", "Murakami"]),
+               interests: ["Film", "Music", "Content creation", "Books"]),
         Member(id: "ingrid", name: "Ingrid", age: 30, city: "Stockholm", role: "Perfumer",
                portrait: .init(lx: 32, ly: 72),
                bio: "Builds scents the way others write short stories.",
                why: "You both believe a meal is always better outdoors.",
                prompts: [.init(q: "My signature", a: "Cedar, salt, and rain on warm stone."),
                          .init(q: "Take me to", a: "A greenhouse, in the middle of winter.")],
-               interests: ["Botany", "Cold swims", "Linen", "Tarkovsky"]),
+               interests: ["Cooking", "Gardening", "Yoga", "Film"]),
         Member(id: "theo", name: "Theo", age: 31, city: "Lisbon", role: "Designer",
                portrait: .init(lx: 60, ly: 28),
                bio: "Makes furniture meant to outlive whoever buys it.",
                why: "Two people who would always rather make than buy.",
                prompts: [.init(q: "In my hands lately", a: "A chair I’ve rebuilt four times over."),
                          .init(q: "I admire", a: "Anyone with a craft and the patience for it.")],
-               interests: ["Woodwork", "Surfing", "Pastel de nata", "Le Corbusier"]),
+               interests: ["Surfing", "Design", "Coffee", "Climbing"]),
     ]
 
     static func member(_ id: String) -> Member? { members.first { $0.id == id } }

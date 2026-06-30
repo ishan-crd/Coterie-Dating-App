@@ -2,34 +2,43 @@
 //  TodayView.swift
 //  coterie-ios
 //
-//  A single introduction a day. The portrait arrives sealed and blurred; the
-//  member reveals it, then chooses to pass or introduce themselves.
+//  Explore: find people who share your interests. Choose the topics you care
+//  about, then like or pass — five likes a day.
 //
 
 import SwiftUI
 
 struct TodayView: View {
     @EnvironmentObject var app: AppState
-    private var match: Member { app.dailyMatch }
+
+    private var candidate: Member? { app.exploreCandidates.first }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 header
-                Text("One introduction, chosen for you today.")
+                Text("Find your people.")
                     .font(.serif(33)).lineSpacing(3)
-                    .frame(maxWidth: 300, alignment: .leading)
-                    .padding(.top, 6).padding(.bottom, 22)
+                    .padding(.top, 6).padding(.bottom, 16)
 
-                if app.dailyOutcome != .none {
-                    doneCard
+                likesPill
+                topicFilter
+
+                if let candidate {
+                    PersonCard(member: candidate, shared: app.sharedInterests(candidate))
+                        .id(candidate.id)
+                        .transition(.asymmetric(insertion: .opacity,
+                                                removal: .scale(scale: 0.92).combined(with: .opacity)))
+                        .padding(.top, 18)
+                    actionRow(for: candidate)
+                        .padding(.top, 18)
                 } else {
-                    introductionCard
-                    if app.revealed { revealedDetail.transition(.opacity) }
+                    emptyState.padding(.top, 30)
                 }
             }
             .padding(.horizontal, 22)
             .padding(.bottom, 120)
+            .animation(.easeOut(duration: 0.3), value: candidate?.id)
         }
         .safeAreaPadding(.top, 8)
     }
@@ -51,162 +60,150 @@ struct TodayView: View {
         return f.string(from: Date())
     }
 
-    // MARK: Sealed / revealed card
+    // MARK: Likes allowance
 
-    private var introductionCard: some View {
-        ZStack {
-            // Portrait
-            PortraitGradient(lx: match.portrait.lx, ly: match.portrait.ly, mood: app.mood)
-                .blur(radius: app.revealed ? 0 : 30)
-                .grayscale(app.revealed ? 0 : 0.45)
-                .brightness(app.revealed ? 0 : 0.05)
-                .scaleEffect(app.revealed ? 1 : 1.12)
-                .animation(.easeOut(duration: 1.1), value: app.revealed)
+    private var likesPill: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(CT.accent)
+            Text(app.likesRemaining == 1 ? "1 like left today"
+                                         : "\(app.likesRemaining) likes left today")
+                .font(.grotesk(12, weight: .medium)).tracking(0.4)
+                .foregroundStyle(CT.ink80)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 9)
+        .background(CT.accentSoft)
+        .clipShape(Capsule())
+    }
 
-            Grain(opacity: 0.13)
+    // MARK: Topic filter
 
-            // Bottom gradient (only once revealed)
-            LinearGradient(colors: [.clear, .black.opacity(0.08), .black.opacity(0.66)],
-                           startPoint: .init(x: 0.5, y: 0.4), endPoint: .bottom)
-                .opacity(app.revealed ? 1 : 0)
-                .animation(.easeOut(duration: 0.9), value: app.revealed)
-
-            // Sealed dim
-            Color.black.opacity(0.34)
-                .opacity(app.revealed ? 0 : 1)
-                .animation(.easeOut(duration: 0.8), value: app.revealed)
-
-            // Name block
-            VStack(alignment: .leading, spacing: 0) {
-                Spacer()
-                HStack { nameBlock; Spacer() }
+    private var topicFilter: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Show me people into").eyebrow(CT.muted, tracking: 2.2)
+                .padding(.top, 22)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 9) {
+                    ChoiceChip(label: "Everyone", selected: app.exploreTopics.isEmpty,
+                               fontSize: 13, hPad: 16, vPad: 9) { app.clearTopics() }
+                    ForEach(app.myTopics, id: \.self) { topic in
+                        ChoiceChip(label: topic, selected: app.exploreTopics.contains(topic),
+                                   fontSize: 13, hPad: 16, vPad: 9) { app.toggleTopic(topic) }
+                    }
+                }
+                .padding(.vertical, 2)
             }
-            .padding(26)
-            .opacity(app.revealed ? 1 : 0)
-            .offset(y: app.revealed ? 0 : 14)
-            .animation(.easeOut(duration: 0.8).delay(0.15), value: app.revealed)
+        }
+    }
 
-            // Sealed centre
-            if !app.revealed { sealedCentre.transition(.opacity) }
+    // MARK: Action row
+
+    private func actionRow(for member: Member) -> some View {
+        HStack(spacing: 14) {
+            Button { app.passMember(member.id) } label: {
+                circleAction(system: "xmark", filled: false)
+            }
+            .buttonStyle(PressableStyle(scale: 0.9))
+
+            Button { app.likeMember(member.id) } label: {
+                circleAction(system: "heart.fill", filled: true)
+            }
+            .buttonStyle(PressableStyle(scale: 0.9))
+            .disabled(app.likesRemaining == 0)
+            .opacity(app.likesRemaining == 0 ? 0.4 : 1)
+        }
+        .frame(maxWidth: .infinity)
+        .overlay(alignment: .center) {
+            if app.likesRemaining == 0 {
+                Text("Out of likes — back tomorrow")
+                    .font(.grotesk(11, weight: .medium)).tracking(0.5)
+                    .foregroundStyle(CT.muted)
+                    .offset(y: 44)
+            }
+        }
+    }
+
+    private func circleAction(system: String, filled: Bool) -> some View {
+        Image(systemName: system)
+            .font(.system(size: 22, weight: .semibold))
+            .foregroundStyle(filled ? CT.accentInk : CT.ink70)
+            .frame(width: 64, height: 64)
+            .background(filled ? CT.accent : CT.surface)
+            .clipShape(Circle())
+            .overlay(Circle().stroke(filled ? Color.clear : CT.border, lineWidth: 1))
+            .shadow(color: .black.opacity(filled ? 0.25 : 0.08), radius: 14, x: 0, y: 8)
+    }
+
+    // MARK: Empty state
+
+    private var emptyState: some View {
+        VStack(spacing: 0) {
+            PulseRings(color: CT.accent, size: 84).padding(.bottom, 30)
+            Text(app.exploreTopics.isEmpty ? "You’re all caught up."
+                                           : "No one new in these topics.")
+                .font(.serif(30)).multilineTextAlignment(.center)
+            Text(app.exploreTopics.isEmpty
+                 ? "You’ve seen everyone for now. New people join all the time — check back soon."
+                 : "Try removing a topic, or come back later as more people join.")
+                .font(.grotesk(14.5)).foregroundStyle(CT.bodyLight)
+                .multilineTextAlignment(.center).lineSpacing(5)
+                .padding(.top, 14).frame(maxWidth: 270)
+
+            if !app.passedIDs.isEmpty {
+                PillButton(title: "Start Over", style: .outline) { app.resetDeck() }
+                    .padding(.top, 30)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 30)
+    }
+}
+
+// MARK: - Person card
+
+private struct PersonCard: View {
+    @EnvironmentObject var app: AppState
+    var member: Member
+    var shared: [String]
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            PortraitGradient(lx: member.portrait.lx, ly: member.portrait.ly, mood: app.mood)
+            Grain(opacity: 0.13)
+            LinearGradient(colors: [.clear, .black.opacity(0.1), .black.opacity(0.7)],
+                           startPoint: .init(x: 0.5, y: 0.38), endPoint: .bottom)
+
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("\(member.name) · \(member.age)")
+                        .font(.serif(38)).foregroundStyle(.white)
+                    Text("\(member.role) · \(member.city)")
+                        .font(.grotesk(11, weight: .regular)).tracking(2.2)
+                        .textCase(.uppercase).foregroundStyle(.white.opacity(0.82))
+                }
+                interestTags
+            }
+            .padding(24)
         }
         .frame(height: 452)
         .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
         .shadow(color: .black.opacity(0.42), radius: 32, x: 0, y: 24)
     }
 
-    private var nameBlock: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(match.name).font(.serif(44)).foregroundStyle(.white)
-            Text("\(match.age) · \(match.city) · \(match.role)")
-                .font(.grotesk(11, weight: .regular)).tracking(2.4)
-                .textCase(.uppercase).foregroundStyle(.white.opacity(0.82))
-        }
-    }
-
-    private var sealedCentre: some View {
-        VStack(spacing: 0) {
-            Text("Today’s Introduction")
-                .font(.grotesk(10.5, weight: .regular)).tracking(3.0)
-                .textCase(.uppercase).foregroundStyle(.white.opacity(0.78))
-                .padding(.bottom, 30)
-            PulseRings().padding(.bottom, 30)
-            Button { app.reveal() } label: {
-                Text("Reveal")
-                    .font(.grotesk(12, weight: .regular)).tracking(2.2).textCase(.uppercase)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 32).padding(.vertical, 14)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .overlay(Capsule().stroke(.white.opacity(0.55), lineWidth: 1))
+    private var interestTags: some View {
+        FlowLayout(spacing: 8) {
+            ForEach(member.interests, id: \.self) { tag in
+                let isShared = shared.contains(tag)
+                Text(tag)
+                    .font(.grotesk(12, weight: isShared ? .semibold : .regular))
+                    .foregroundStyle(isShared ? CT.accentInk : .white)
+                    .padding(.horizontal, 13).padding(.vertical, 7)
+                    .background(isShared ? AnyShapeStyle(CT.accent)
+                                         : AnyShapeStyle(.ultraThinMaterial))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(.white.opacity(isShared ? 0 : 0.3), lineWidth: 1))
             }
-            .buttonStyle(PressableStyle(scale: 0.95))
         }
-    }
-
-    // MARK: Revealed detail
-
-    private var revealedDetail: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Why you were introduced").eyebrow(CT.muted, tracking: 2.6)
-                Text(match.why).serifItalic(23).foregroundStyle(CT.ink80).lineSpacing(4)
-            }
-            .padding(.top, 26)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(match.prompts[0].q).eyebrow(CT.muted, tracking: 2.6)
-                Text("“\(match.prompts[0].a)”").font(.serif(25)).foregroundStyle(CT.ink90).lineSpacing(3)
-            }
-            .padding(.top, 24)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .overlay(alignment: .top) { Rectangle().fill(CT.hairline).frame(height: 1) }
-            .padding(.top, 6)
-
-            HStack(spacing: 12) {
-                Button { app.passDaily() } label: {
-                    actionLabel("Pass", filled: false)
-                }
-                .buttonStyle(PressableStyle(scale: 0.96))
-                Button { app.introduceDaily() } label: {
-                    actionLabel("Introduce Yourself", filled: true)
-                }
-                .buttonStyle(PressableStyle(scale: 0.96))
-                .frame(maxWidth: .infinity)
-                .layoutPriority(1)
-            }
-            .padding(.top, 24)
-        }
-    }
-
-    private func actionLabel(_ title: String, filled: Bool) -> some View {
-        Text(title)
-            .font(.grotesk(12, weight: .regular)).tracking(2.0).textCase(.uppercase)
-            .foregroundStyle(filled ? CT.paper : CT.ink)
-            .frame(maxWidth: .infinity).padding(.vertical, 16)
-            .background(filled ? CT.ink : CT.paper)
-            .clipShape(Capsule())
-            .overlay(filled ? nil : Capsule().stroke(CT.borderStrong, lineWidth: 1))
-    }
-
-    // MARK: Done
-
-    private var doneCard: some View {
-        VStack(spacing: 0) {
-            Circle().fill(CT.ink).frame(width: 8, height: 8).padding(.bottom, 26)
-            Text(app.dailyOutcome == .passed ? "Until tomorrow." : "Introduction sent.")
-                .font(.serif(36)).multilineTextAlignment(.center)
-            Text(app.dailyOutcome == .passed
-                 ? "You let this one pass. Coterie offers a single introduction a day — yours returns in the morning."
-                 : "Your note is on its way. We curate one introduction a day; the next arrives tomorrow.")
-                .font(.grotesk(14.5)).foregroundStyle(CT.bodyLight)
-                .multilineTextAlignment(.center).lineSpacing(5)
-                .padding(.top, 16).frame(maxWidth: 250)
-        }
-        .frame(maxWidth: .infinity).frame(height: 430)
-        .padding(40)
-        .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous)
-            .stroke(CT.border, lineWidth: 1))
-    }
-}
-
-// MARK: - Pulsing rings (sealed state ornament)
-
-private struct PulseRings: View {
-    @State private var animate = false
-    var body: some View {
-        ZStack {
-            ring(delay: 0)
-            ring(delay: 1.2)
-            Circle().fill(.white).frame(width: 7, height: 7)
-        }
-        .frame(width: 70, height: 70)
-        .onAppear { animate = true }
-    }
-
-    private func ring(delay: Double) -> some View {
-        Circle().stroke(.white.opacity(0.5), lineWidth: 1)
-            .scaleEffect(animate ? 1.7 : 0.7)
-            .opacity(animate ? 0 : 0.55)
-            .animation(.easeOut(duration: 2.4).repeatForever(autoreverses: false).delay(delay),
-                       value: animate)
     }
 }
