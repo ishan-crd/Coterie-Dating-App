@@ -121,9 +121,9 @@ struct ProfileDetailView: View {
     private func sheetAction(_ title: String, filled: Bool) -> some View {
         Text(title)
             .font(.grotesk(12, weight: .regular)).tracking(2.0).textCase(.uppercase)
-            .foregroundStyle(filled ? CT.paper : CT.ink)
+            .foregroundStyle(filled ? CT.accentInk : CT.ink)
             .frame(maxWidth: .infinity).padding(.vertical, 16)
-            .background(filled ? CT.ink : CT.paper)
+            .background(filled ? CT.accent : CT.paper)
             .clipShape(Capsule())
             .overlay(filled ? nil : Capsule().stroke(CT.borderStrong, lineWidth: 1))
     }

@@ -89,9 +89,9 @@ struct ChatView: View {
             if msg.fromMe { Spacer(minLength: 50) }
             Text(msg.text)
                 .font(.grotesk(15)).lineSpacing(2)
-                .foregroundStyle(msg.fromMe ? .white : CT.ink90)
+                .foregroundStyle(msg.fromMe ? CT.accentInk : CT.ink90)
                 .padding(.horizontal, 16).padding(.vertical, 11)
-                .background(msg.fromMe ? CT.ink : CT.bubbleThem)
+                .background(msg.fromMe ? CT.accent : CT.bubbleThem)
                 .clipShape(BubbleShape(fromMe: msg.fromMe))
             if !msg.fromMe { Spacer(minLength: 50) }
         }
@@ -120,8 +120,8 @@ struct ChatView: View {
                 .onSubmit(sendDraft)
             Button(action: sendDraft) {
                 Image(systemName: "arrow.up").font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 46, height: 46).background(CT.ink).clipShape(Circle())
+                    .foregroundStyle(CT.accentInk)
+                    .frame(width: 46, height: 46).background(CT.accent).clipShape(Circle())
             }
             .buttonStyle(PressableStyle(scale: 0.9))
         }

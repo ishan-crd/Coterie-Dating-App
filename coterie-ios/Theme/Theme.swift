@@ -48,6 +48,11 @@ enum CT {
     static let surface = Color.dyn(Color(hex: "FFFFFF"), Color(hex: "1C1B18"))  // lifted fields/cards
     static let ink     = Color.dyn(Color(hex: "0B0B0B"), Color(hex: "F4F1EC"))  // primary text / buttons
 
+    // Warm accent — primary actions, selections & active nav
+    static let accent    = Color.dyn(Color(hex: "E0674A"), Color(hex: "F07E5E"))
+    static let accentInk = Color.dyn(Color(hex: "FFFFFF"), Color(hex: "1A0F0B"))  // text laid over accent
+    static let accentSoft = Color.dyn(Color(hex: "E0674A").opacity(0.12), Color(hex: "F07E5E").opacity(0.16))
+
     // Text tones
     static let ink90     = Color.dyn(Color(hex: "16140F"), Color(hex: "ECE8E2"))
     static let ink80     = Color.dyn(Color(hex: "1A1814"), Color(hex: "E2DED7"))
@@ -234,13 +239,13 @@ struct PillButton: View {
 
     private var foreground: Color {
         switch style {
-        case .filled:  return enabled ? CT.paper : CT.disabledInk
+        case .filled:  return enabled ? CT.accentInk : CT.disabledInk
         case .outline, .ghost: return CT.ink
         }
     }
     private var background: Color {
         switch style {
-        case .filled:  return enabled ? CT.ink : CT.disabledFill
+        case .filled:  return enabled ? CT.accent : CT.disabledFill
         case .outline: return CT.surface
         case .ghost:   return .clear
         }
@@ -275,13 +280,13 @@ struct ChoiceChip: View {
         Button(action: action) {
             Text(label)
                 .font(.grotesk(fontSize))
-                .foregroundStyle(selected ? CT.paper : CT.ink80)
+                .foregroundStyle(selected ? CT.accentInk : CT.ink80)
                 .padding(.horizontal, hPad)
                 .padding(.vertical, vPad)
-                .background(selected ? CT.ink : CT.surface)
+                .background(selected ? CT.accent : CT.surface)
                 .clipShape(Capsule())
                 .overlay(
-                    Capsule().stroke(selected ? CT.ink : CT.border, lineWidth: 1)
+                    Capsule().stroke(selected ? CT.accent : CT.border, lineWidth: 1)
                 )
         }
         .buttonStyle(PressableStyle(scale: 0.96))
@@ -300,15 +305,15 @@ struct ChoiceRow: View {
         Button(action: action) {
             Text(label)
                 .font(.serif(fontSize))
-                .foregroundStyle(selected ? CT.paper : CT.ink80)
+                .foregroundStyle(selected ? CT.accentInk : CT.ink80)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 18)
                 .padding(.vertical, 15)
-                .background(selected ? CT.ink : CT.surface)
+                .background(selected ? CT.accent : CT.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(selected ? CT.ink : CT.border, lineWidth: 1)
+                        .stroke(selected ? CT.accent : CT.border, lineWidth: 1)
                 )
         }
         .buttonStyle(PressableStyle(scale: 0.99))

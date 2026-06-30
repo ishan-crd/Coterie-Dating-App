@@ -73,7 +73,7 @@ private struct GlassTabBar: View {
                     Image(systemName: icon)
                         .font(.system(size: 21, weight: .light))
                     if badge {
-                        Circle().fill(CT.ink)
+                        Circle().fill(CT.accent)
                             .frame(width: 7, height: 7)
                             .overlay(Circle().stroke(CT.paper, lineWidth: 1.5))
                             .offset(x: 5, y: -3)
@@ -84,7 +84,7 @@ private struct GlassTabBar: View {
                     .tracking(1.4)
                     .textCase(.uppercase)
             }
-            .foregroundStyle(active ? CT.ink : CT.tabIdle)
+            .foregroundStyle(active ? CT.accent : CT.tabIdle)
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
