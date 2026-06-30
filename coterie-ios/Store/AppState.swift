@@ -133,10 +133,40 @@ final class AppState: ObservableObject {
         case .about:     return !profile.pronouns.isEmpty && !profile.seeking.isEmpty
         case .city:      return !profile.city.trimmingCharacters(in: .whitespaces).isEmpty
         case .work:      return !profile.work.trimmingCharacters(in: .whitespaces).isEmpty
-        case .prompt:    return !profile.promptId.isEmpty && !profile.answer.trimmingCharacters(in: .whitespaces).isEmpty
+        case .prompt:    return !profile.prompts.isEmpty &&
+                                profile.prompts.allSatisfy { !$0.answer.trimmingCharacters(in: .whitespaces).isEmpty }
         case .interests: return profile.interests.count >= 3
-        case .intention: return !profile.intention.isEmpty
         }
+    }
+
+    // MARK: Prompts
+
+    /// The most a member may answer.
+    static let maxPrompts = 3
+
+    /// Prompts not yet chosen by the member.
+    var availablePrompts: [(id: String, q: String)] {
+        CTData.prompts.filter { p in !profile.prompts.contains { $0.promptId == p.id } }
+    }
+
+    func addPrompt(_ promptId: String) {
+        guard profile.prompts.count < Self.maxPrompts,
+              !profile.prompts.contains(where: { $0.promptId == promptId }) else { return }
+        profile.prompts.append(PromptResponse(promptId: promptId))
+    }
+
+    func removePrompt(_ id: UUID) {
+        profile.prompts.removeAll { $0.id == id }
+    }
+
+    /// A two-way binding into a chosen prompt's answer.
+    func promptAnswerBind(_ id: UUID) -> Binding<String> {
+        Binding(get: { self.profile.prompts.first { $0.id == id }?.answer ?? "" },
+                set: { v in
+                    if let i = self.profile.prompts.firstIndex(where: { $0.id == id }) {
+                        self.profile.prompts[i].answer = v
+                    }
+                })
     }
 
     func advanceOnboarding() {
@@ -318,5 +348,5 @@ enum ActiveSheet: Identifiable {
 }
 
 enum OnboardingStep: Int, CaseIterable {
-    case welcome, name, birthday, photos, about, city, work, prompt, interests, intention, review
+    case welcome, name, birthday, photos, about, city, work, prompt, interests, review
 }

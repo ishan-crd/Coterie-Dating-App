@@ -102,7 +102,6 @@ struct OnboardingView: View {
         case .work:      WorkStep()
         case .prompt:    PromptStep()
         case .interests: InterestsStep()
-        case .intention: IntentionStep()
         case .review:    ReviewStep()
         }
     }
@@ -320,21 +319,104 @@ private struct PromptStep: View {
     @EnvironmentObject var app: AppState
     var body: some View {
         VStack(alignment: .leading) {
-            StepHeading(title: "Choose a prompt.",
-                        subtitle: "Members fall for the way people answer these.")
-            VStack(spacing: 9) {
-                ForEach(CTData.prompts, id: \.id) { p in
-                    ChoiceRow(label: p.q, selected: app.profile.promptId == p.id) {
-                        app.profile.promptId = p.id
+            StepHeading(title: "Answer a few prompts.",
+                        subtitle: "Choose up to three. Members fall for the way people answer these.")
+            PromptComposer()
+                .padding(.top, 26)
+        }
+    }
+}
+
+/// Lets the member pick up to three prompts from the full list and answer each,
+/// all on one page. Reused in onboarding and edit-profile.
+struct PromptComposer: View {
+    @EnvironmentObject var app: AppState
+    /// Which empty slot is currently choosing a prompt (true = the picker is open).
+    @State private var picking = false
+
+    var body: some View {
+        VStack(spacing: 16) {
+            ForEach(app.profile.prompts) { resp in
+                answeredCard(resp)
+            }
+
+            if app.profile.prompts.count < AppState.maxPrompts {
+                if picking {
+                    picker
+                } else {
+                    Button { withAnimation(.easeOut(duration: 0.2)) { picking = true } } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text(app.profile.prompts.isEmpty ? "Choose a prompt" : "Add another prompt")
+                                .font(.grotesk(13, weight: .medium)).tracking(0.4)
+                        }
+                        .foregroundStyle(CT.accent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(CT.accentSoft)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(CT.accent.opacity(0.4), style: StrokeStyle(lineWidth: 1, dash: [5]))
+                        )
+                    }
+                    .buttonStyle(PressableStyle(scale: 0.99))
+                }
+            }
+        }
+    }
+
+    private func answeredCard(_ resp: PromptResponse) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                Text(CTData.promptText(resp.promptId) ?? "")
+                    .eyebrow(CT.accent, tracking: 2.0)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Button { withAnimation { app.removePrompt(resp.id) } } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(CT.muted)
+                        .frame(width: 24, height: 24)
+                        .background(CT.fill).clipShape(Circle())
+                }
+                .buttonStyle(PressableStyle(scale: 0.9))
+            }
+            AnswerEditor(text: app.promptAnswerBind(resp.id), height: 88)
+        }
+        .padding(16)
+        .background(CT.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(CT.border, lineWidth: 1)
+        )
+    }
+
+    private var picker: some View {
+        VStack(spacing: 9) {
+            HStack {
+                Text("Pick a prompt").eyebrow(CT.muted, tracking: 2.2)
+                Spacer()
+                Button { withAnimation { picking = false } } label: {
+                    Text("Cancel").font(.grotesk(12, weight: .medium)).foregroundStyle(CT.muted)
+                }
+            }
+            .padding(.bottom, 4)
+            ForEach(app.availablePrompts, id: \.id) { p in
+                ChoiceRow(label: p.q, selected: false, fontSize: 18) {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        app.addPrompt(p.id)
+                        picking = false
                     }
                 }
             }
-            .padding(.top, 26)
-            if !app.profile.promptId.isEmpty {
-                AnswerEditor(text: app.bind(\.answer))
-                    .padding(.top, 8)
-            }
         }
+        .padding(16)
+        .background(CT.paper)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(CT.hairline, lineWidth: 1)
+        )
     }
 }
 
@@ -384,23 +466,6 @@ private struct InterestsStep: View {
     private var interestHint: String {
         let c = app.profile.interests.count
         return c >= 3 ? "\(c) selected" : "Choose at least \(3 - c) more"
-    }
-}
-
-private struct IntentionStep: View {
-    @EnvironmentObject var app: AppState
-    var body: some View {
-        VStack(alignment: .leading) {
-            StepHeading(title: "What brings you here?", subtitle: "Honesty saves everyone time.")
-            VStack(spacing: 10) {
-                ForEach(CTData.intentions, id: \.self) { o in
-                    ChoiceRow(label: o, selected: app.profile.intention == o, fontSize: 20) {
-                        app.profile.intention = o
-                    }
-                }
-            }
-            .padding(.top, 26)
-        }
     }
 }
 

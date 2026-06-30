@@ -43,17 +43,8 @@ struct EditProfileView: View {
                     label("Work").padding(.top, 28)
                     UnderlineField(placeholder: "e.g. Architect, Writer, Founder", text: app.bind(\.work), fontSize: 24)
 
-                    label("Your prompt").padding(.top, 28)
-                    VStack(spacing: 9) {
-                        ForEach(CTData.prompts, id: \.id) { p in
-                            ChoiceRow(label: p.q, selected: app.profile.promptId == p.id, fontSize: 18) {
-                                app.profile.promptId = p.id
-                            }
-                        }
-                    }
-                    if !app.profile.promptId.isEmpty {
-                        AnswerEditor(text: app.bind(\.answer), height: 92).padding(.top, 8)
-                    }
+                    label("Your prompts").padding(.top, 28)
+                    PromptComposer()
 
                     label("Interests").padding(.top, 28)
                     FlowLayout(spacing: 9) {

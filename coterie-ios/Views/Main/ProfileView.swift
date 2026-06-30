@@ -19,8 +19,8 @@ struct ProfileView: View {
                 PillButton(title: "Edit Profile", style: .outline) { app.activeSheet = .edit }
                     .padding(.top, 16)
 
-                if let prompt = CTData.prompts.first(where: { $0.id == p.promptId }), !p.answer.isEmpty {
-                    promptSection(prompt.q, p.answer)
+                ForEach(p.prompts.filter { !$0.answer.isEmpty }) { resp in
+                    promptSection(CTData.promptText(resp.promptId) ?? "", resp.answer)
                 }
                 if !p.interests.isEmpty { interestsSection }
 

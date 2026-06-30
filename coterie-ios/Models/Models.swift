@@ -78,10 +78,9 @@ struct UserProfile: Codable, Equatable {
     var seeking = ""
     var city = ""
     var work = ""
-    var promptId = ""
-    var answer = ""
+    /// Up to three chosen prompts and their answers.
+    var prompts: [PromptResponse] = []
     var interests: [String] = []
-    var intention = ""
 
     /// Age derived from the full date of birth, relative to today.
     var age: Int? {
@@ -113,14 +112,22 @@ extension UserProfile {
         p.seeking = "Everyone"
         p.city = "Lisbon"
         p.work = "Architect"
-        p.promptId = "sunday"
-        p.answer = "A flea market at dawn, a long lunch, and absolutely no plans after."
+        p.prompts = [
+            PromptResponse(promptId: "sunday", answer: "A flea market at dawn, a long lunch, and absolutely no plans after."),
+            PromptResponse(promptId: "alive", answer: "Knee-deep in cold water before the city is awake."),
+        ]
         p.interests = ["Architecture", "Film photography", "Natural wine", "Sailing"]
-        p.intention = "Something genuine and unhurried"
         return p
     }
 }
 #endif
+
+/// A prompt the user has chosen, paired with their answer.
+struct PromptResponse: Codable, Equatable, Hashable, Identifiable {
+    var id = UUID()
+    var promptId: String
+    var answer: String = ""
+}
 
 /// Codable mirror of PortraitSeed for persistence.
 struct PortraitSeedCodable: Codable, Equatable, Hashable {
@@ -142,6 +149,23 @@ enum CTData {
         ("win", "The way to win me over…"),
         ("alive", "I feel most alive when…"),
         ("view", "An opinion I’ll defend…"),
+        ("dinner", "My ideal dinner guest is…"),
+        ("travel", "The trip that changed me…"),
+        ("weekend", "You’ll usually find me on a weekend…"),
+        ("simple", "The simplest thing that makes me happy…"),
+        ("learning", "Lately I’ve been learning to…"),
+        ("laugh", "I can’t stop laughing at…"),
+        ("brave", "The bravest thing I’ve done…"),
+        ("song", "The song I’ll never skip…"),
+        ("home", "Home, to me, sounds like…"),
+        ("overrated", "Something everyone loves that I find overrated…"),
+        ("ritual", "A small ritual I never miss…"),
+        ("kindness", "The kindest thing someone’s done for me…"),
+        ("greenflag", "An instant green flag…"),
+        ("project", "The project I can’t put down…"),
+        ("first", "Our first adventure should be…"),
+        ("childhood", "My childhood dream job was…"),
+        ("comfort", "My comfort meal is…"),
     ]
 
     static let interests = [
@@ -150,12 +174,10 @@ enum CTData {
         "Travel", "Tennis", "Design", "Sailing", "Pottery",
     ]
 
-    static let intentions = [
-        "A relationship, when it’s right",
-        "Something genuine and unhurried",
-        "To meet remarkable people",
-        "Open to seeing where it leads",
-    ]
+    /// Look up a prompt's question text by id.
+    static func promptText(_ id: String) -> String? {
+        prompts.first { $0.id == id }?.q
+    }
 
     /// Fixed photo light-positions for the six profile slots.
     static let photoPositions: [PortraitSeed] = [
