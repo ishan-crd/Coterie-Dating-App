@@ -20,8 +20,9 @@
 
 ### Current state / maturity
 - The **frontend is a working prototype** driven entirely by **in-memory seed data** (`CTData` in `Models.swift`) and **`UserDefaults`** persistence (`Persistence.swift`). There is **no networking layer yet**.
-- Portraits are **not real photos** — they are procedurally rendered gradients (`PortraitGradient`) standing in for images. Replacing these with real image loading is a primary backend/frontend integration task (see §6, §7).
-- All "other people" (the 6 seed `Member`s) are fake. The like/pass/match/chat flows are simulated locally (e.g. chat auto-replies from a canned pool).
+- **The signed-in user's own photos are REAL uploads** — picked via SwiftUI `PhotosPicker`, downscaled/recompressed to JPEG, and stored as `Data` in the profile (persisted in `UserDefaults`). See §6/§7. The backend task is to upload these and swap in remote URLs.
+- **Other people's photos (the 6 seed `Member`s) are still placeholders** — procedurally rendered gradients (`PortraitGradient`). Members are fake; replacing their `portrait` with real image URLs is a backend/frontend integration task (see §6, §7).
+- All "other people" are fake. The like/pass/match/chat flows are simulated locally (e.g. chat auto-replies from a canned pool).
 
 ---
 
@@ -125,7 +126,7 @@ struct PromptResponse: Codable, Equatable, Hashable, Identifiable {
 struct UserProfile: Codable, Equatable {
     var name = ""
     var dobM = ""; var dobD = ""; var dobY = ""   // day/month/year as strings; age is derived
-    var photos: [PortraitSeedCodable?] = Array(repeating: nil, count: 6)  // 6 slots; PLACEHOLDER
+    var photos: [Data?] = Array(repeating: nil, count: 6)   // 6 slots; REAL uploaded JPEG data (downscaled)
     var pronouns = ""        // from CTData.pronouns
     var seeking = ""         // from CTData.seeking — LEGACY dating field (see §11)
     var city = ""
@@ -135,17 +136,18 @@ struct UserProfile: Codable, Equatable {
 
     var age: Int? { ... }                // computed from dob*, relative to today
     var filledPhotoCount: Int { ... }
-    var firstPhoto: PortraitSeedCodable? { ... }
+    var firstPhoto: Data? { ... }        // first non-nil uploaded photo
     var isComplete: Bool { !name.isEmpty && filledPhotoCount >= 2 }
 }
 ```
+> User photos are **real images** now: `[Data?]` of (downscaled, quality ~0.72, max 1080px, opaque) JPEG. `PortraitSeedCodable` is retained in the file but is **unused/legacy**. `Member.portrait` (other people) is still a `PortraitSeed` gradient placeholder.
 
-### `PortraitSeed` / `PortraitSeedCodable` — PLACEHOLDER for photos
+### `PortraitSeed` / `PortraitSeedCodable` — gradient placeholder (for Members only)
 ```swift
 struct PortraitSeed: Hashable { var lx: Double; var ly: Double }  // light-source position 0..100
-struct PortraitSeedCodable: Codable, Equatable, Hashable { var lx: Double; var ly: Double }
+struct PortraitSeedCodable: Codable, Equatable, Hashable { var lx: Double; var ly: Double }  // LEGACY/UNUSED
 ```
-> **IMPORTANT:** These describe a *rendered gradient*, not an image. In production, replace `portrait`/`photos` with **image URLs** (or asset ids) and load them. `PortraitGradient` can stay as a loading placeholder.
+> `PortraitSeed` describes a *rendered gradient*, not an image — still used for **`Member.portrait`** (the fake other people). In production, replace `Member.portrait` with **image URLs** and load them; `PortraitGradient` can stay as a loading placeholder. `PortraitSeedCodable` is now unused (the user's photos became real `Data`).
 
 ### Conversations & invites
 ```swift
@@ -188,7 +190,7 @@ ids: `sunday, fall, win, alive, view, dinner, travel, weekend, simple, learning,
 Seed inbound interest + a canned pool of fake chat replies used to simulate the other person responding.
 
 ### `photoPositions`
-Six fixed `PortraitSeed`s used when the user "adds" a photo in onboarding (placeholder behavior).
+Six fixed `PortraitSeed`s — **now legacy/unused** (the user uploads real photos via `PhotosPicker`; this was the old gradient-placeholder behavior).
 
 ---
 
@@ -211,7 +213,7 @@ Six fixed `PortraitSeed`s used when the user "adds" a photo in onboarding (place
 - `canAdvance(from:)` — per-step validation (e.g. name ≥ 2 chars, ≥ 2 photos, ≥ 3 interests, every chosen prompt answered).
 - `advanceOnboarding()`, `backOnboarding()`, `completeOnboarding()` (persists profile, enters app).
 - Prompt management: `maxPrompts = 3`; `availablePrompts`, `addPrompt(_:)`, `removePrompt(_:)`, `promptAnswerBind(_:)`.
-- Photos: `togglePhoto(_:)` (placeholder — adds/removes a gradient seed). **Backend: real photo upload/picker.**
+- Photos: `setPhoto(_ index:_ data:)` (downscales via `downscaledJPEG` then stores) and `removePhoto(_ index:)`. The picker UI is `PhotoSlot`/`PhotoGrid` using SwiftUI `PhotosPicker` (see §10/§9). **Backend: in `setPhoto`, also upload the image and store the returned remote URL.**
 - Interests: `toggleInterest(_:)`.
 
 ### Explore / discovery (the core friend-finding loop)
@@ -254,7 +256,7 @@ Currently everything is local `UserDefaults` JSON:
 - `Persistence.clear()` wipes the profile on logout (settings preserved).
 
 **Backend migration plan:**
-- Profile, photos, prompts, interests → server-owned, fetched on login.
+- Profile, photos (currently real JPEG `Data` in the local profile), prompts, interests → server-owned, fetched on login; photos uploaded to object storage.
 - Likes allowance + pass/like history → server-owned and enforced.
 - Conversations/messages → server-owned, realtime.
 - Keep `Persistence` as a thin local cache (offline support) if desired.
@@ -270,7 +272,7 @@ The frontend currently has **no network layer**. Recommended endpoints (REST or 
 - `POST /auth/session` (sign in / sign up) → `{ token, profileComplete }`.
 - `GET /me` → `UserProfile`.
 - `PUT /me` → update profile (name, dob, city, work, pronouns, prompts, interests).
-- `POST /me/photos` (multipart) → upload a photo; returns an image URL/id. `DELETE /me/photos/{id}`. (Replaces the gradient placeholder system — see §6 photos.)
+- `POST /me/photos` (multipart) → upload a photo; returns an image URL/id. `DELETE /me/photos/{id}`. The client already captures real images (`UserProfile.photos: [Data?]` via `PhotosPicker` + `AppState.setPhoto`); wire the upload into `setPhoto` and replace local `Data` with the returned URL.
 
 ### Discovery (Explore feed)
 - `GET /discovery?topics=Hiking,Music&cursor=...` → paginated `[Member]` excluding already passed/liked, ranked by shared interests. (Replaces `exploreCandidates`.)
@@ -291,8 +293,8 @@ The frontend currently has **no network layer**. Recommended endpoints (REST or 
 - `GET /config` → `{ interests[], prompts[], cities[], pronouns[] }` so the vocab isn't hardcoded in the client. Until then, **keep `CTData.interests` / `CTData.prompts` identical on both sides.**
 
 ### Data model mapping notes for the backend
-- `Member.portrait` (PortraitSeed) → replace with `photos: [URL]`.
-- `UserProfile.photos` (6 `PortraitSeedCodable?` slots) → `photos: [Photo]` with order.
+- `Member.portrait` (PortraitSeed gradient) → replace with `photos: [URL]`.
+- `UserProfile.photos` (6 `Data?` slots, real JPEGs) → upload each and store as `photos: [Photo/URL]` with order.
 - `UserProfile.dobD/dobM/dobY` strings → a real date; age is derived client-side today.
 - Interests/prompt ids are **strings**; keep them stable.
 
@@ -316,6 +318,7 @@ All UI pulls from here. Do not hardcode colors/fonts in views.
 
 ### Reusable components (in Theme.swift unless noted)
 - `LogoMark(height:color:)` — the **"Circle" wordmark, rendered as serif Text** (NOT an image anymore). Scales font to `height`.
+- `ProfilePhoto(data:placeholder:)` — renders an uploaded photo (`Data` → `UIImage`) scaled-to-fill, or a `@ViewBuilder` placeholder when empty. Used by `PhotoSlot`, onboarding Review thumbnail, and the Profile portrait card. Always wrap it in a sized + clipped container (it fills).
 - `PulseRings(color:size:)` — animated expanding-rings "searching" ornament (used in Explore empty state; reusable).
 - `PillButton(title:style:enabled:action:)` — primary/outline/ghost capsule button (filled = accent).
 - `PressableStyle(scale:)` — press scale-down button style.
@@ -330,7 +333,7 @@ All UI pulls from here. Do not hardcode colors/fonts in views.
 ## 10. Key screens (current behavior)
 
 - **InviteView** — code entry, accepts `111111`; quiet path to `WaitlistView`. Hero shows `LogoMark` + tagline "Find friends who share your world."
-- **OnboardingView** — 10 steps (welcome, name, birthday DD/MM/YYYY, photos, about [pronouns + seeking], city, work, **prompts (PromptComposer: pick up to 3 from the list, answer each inline)**, interests [≥3], review). `PromptComposer` is reused in EditProfileView.
+- **OnboardingView** — 10 steps (welcome, name, birthday DD/MM/YYYY, **photos (real upload)**, about [pronouns + seeking], city, work, **prompts (PromptComposer: pick up to 3 from the list, answer each inline)**, interests [≥3], review). The photos step uses `PhotoGrid` → `PhotoSlot` (SwiftUI `PhotosPicker`): tap a frame to pick/replace; ✕ removes. `PhotoSlot` resets its `pickerItem` to `nil` after each pick/remove so the picker reopens clean and re-picking the same image still fires. `PhotoGrid` and `PromptComposer` are reused in EditProfileView.
 - **TodayView (EXPLORE)** — THE primary screen. Top bar: `LogoMark`, "N likes left", and a horizontal scroll of **topic filter chips** (Everyone + the user's interests). Body: the current candidate shown as a **full vertical scroll** of interleaved **photos and prompt/about/shared/interests cards**. **Static ✕ (pass, left) and ♥ (like, right)** float over the scroll, pinned above the tab bar. Empty state uses `PulseRings`.
 - **GalleryView** — browse all `CTData.members` as cards → opens `ProfileDetailView`.
 - **InvitesView** — inbound interest (seed data).
@@ -377,7 +380,7 @@ The app began as an **invite-only dating app ("Coterie")** and was pivoted to a 
 ## 13. Suggested next steps for the backend model
 
 1. Stand up auth + `/me` profile CRUD; wire `AppState.onInviteChanged` / onboarding completion to real endpoints (keep the "returning user skips onboarding" behavior keyed off `profileComplete`).
-2. Real photo upload + image loading (replace `PortraitGradient`/`PortraitSeed` with URLs; use `AsyncImage` or a small loader with `PortraitGradient` as the placeholder).
+2. Photo backend: the user's own photo **capture is already real** (`PhotosPicker` → `AppState.setPhoto` → JPEG `Data`). Add upload-to-storage inside `setPhoto` and persist URLs instead of `Data`. Separately, replace `Member.portrait` gradients with real image URLs (use `AsyncImage`/a loader; `ProfilePhoto`/`PortraitGradient` work as placeholders).
 3. Discovery feed endpoint (`exploreCandidates` → paginated server feed by topics) + server-enforced 5/day like cap and pass/like recording with match logic.
 4. Realtime messaging (replace the simulated `send`/`replyPool`) + push notifications.
 5. Optional `/config` to serve interests/prompts/cities so vocab isn't duplicated.

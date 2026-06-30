@@ -72,8 +72,9 @@ struct UserProfile: Codable, Equatable {
     var dobM = ""
     var dobD = ""
     var dobY = ""
-    /// Six photo slots; a non-nil value stores the portrait seed for the gradient.
-    var photos: [PortraitSeedCodable?] = Array(repeating: nil, count: 6)
+    /// Six photo slots; a non-nil value holds the (downscaled) JPEG data for the
+    /// uploaded image.
+    var photos: [Data?] = Array(repeating: nil, count: 6)
     var pronouns = ""
     var seeking = ""
     var city = ""
@@ -94,7 +95,7 @@ struct UserProfile: Codable, Equatable {
     }
 
     var filledPhotoCount: Int { photos.compactMap { $0 }.count }
-    var firstPhoto: PortraitSeedCodable? { photos.compactMap { $0 }.first }
+    var firstPhoto: Data? { photos.compactMap { $0 }.first }
 
     var isComplete: Bool { !name.isEmpty && filledPhotoCount >= 2 }
 }
@@ -106,8 +107,7 @@ extension UserProfile {
         var p = UserProfile()
         p.name = "Aurelio"
         p.dobM = "04"; p.dobD = "12"; p.dobY = "1994"
-        p.photos[0] = PortraitSeedCodable(lx: 40, ly: 18)
-        p.photos[1] = PortraitSeedCodable(lx: 66, ly: 30)
+        // Photos are uploaded by the user at runtime; the sample leaves them empty.
         p.pronouns = "He / Him"
         p.seeking = "Everyone"
         p.city = "Lisbon"

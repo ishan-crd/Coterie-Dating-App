@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct OnboardingView: View {
     @EnvironmentObject var app: AppState
@@ -211,47 +212,82 @@ private struct PhotosStep: View {
 
 /// The reusable 6-slot photo grid (used in onboarding and edit profile).
 struct PhotoGrid: View {
-    @EnvironmentObject var app: AppState
     private let cols = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
 
     var body: some View {
         LazyVGrid(columns: cols, spacing: 10) {
             ForEach(0..<6, id: \.self) { i in
-                Button { app.togglePhoto(i) } label: {
-                    ZStack {
-                        if let seed = app.profile.photos[i] {
-                            PortraitGradient(lx: seed.lx, ly: seed.ly, mood: app.mood)
-                            Grain(opacity: 0.14)
-                            VStack {
-                                HStack {
-                                    Spacer()
-                                    ZStack {
-                                        Circle().fill(Color.black.opacity(0.42))
-                                        Image(systemName: "xmark")
-                                            .font(.system(size: 9, weight: .bold))
-                                            .foregroundStyle(.white)
-                                    }
-                                    .frame(width: 22, height: 22)
-                                }
-                                Spacer()
-                            }
-                            .padding(7)
-                        } else {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
-                                .foregroundStyle(CT.border)
-                            Image(systemName: "plus")
-                                .font(.system(size: 20, weight: .regular))
-                                .foregroundStyle(CT.muted)
-                        }
-                    }
-                    .aspectRatio(3.0/4.0, contentMode: .fit)
-                    .background(CT.photoEmpty)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                .buttonStyle(PressableStyle())
+                PhotoSlot(index: i)
             }
         }
+    }
+}
+
+/// A single photo slot backed by the system photo picker. Tap to choose or
+/// replace; the corner button removes.
+private struct PhotoSlot: View {
+    @EnvironmentObject var app: AppState
+    let index: Int
+    @State private var pickerItem: PhotosPickerItem?
+
+    private var data: Data? { app.profile.photos[index] }
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            PhotosPicker(selection: $pickerItem, matching: .images,
+                         photoLibrary: .shared()) {
+                slotContent
+            }
+            .buttonStyle(PressableStyle())
+
+            if data != nil {
+                Button {
+                    app.removePhoto(index)
+                    pickerItem = nil
+                } label: {
+                    ZStack {
+                        Circle().fill(Color.black.opacity(0.5))
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(width: 24, height: 24)
+                }
+                .padding(7)
+            }
+        }
+        .onChange(of: pickerItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                let loaded = try? await newItem.loadTransferable(type: Data.self)
+                await MainActor.run {
+                    if let loaded { app.setPhoto(index, loaded) }
+                    // Reset so reopening the picker starts clean and re-picking the
+                    // same image still fires this handler.
+                    pickerItem = nil
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var slotContent: some View {
+        RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .fill(CT.photoEmpty)
+            .aspectRatio(3.0 / 4.0, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .overlay {
+                ProfilePhoto(data: data) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
+                            .foregroundStyle(CT.border)
+                        Image(systemName: "plus")
+                            .font(.system(size: 20, weight: .regular))
+                            .foregroundStyle(CT.muted)
+                    }
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -474,13 +510,8 @@ private struct ReviewStep: View {
     private var p: UserProfile { app.profile }
     var body: some View {
         VStack(spacing: 0) {
-            ZStack {
-                if let seed = p.firstPhoto {
-                    PortraitGradient(lx: seed.lx, ly: seed.ly, mood: app.mood)
-                    Grain(opacity: 0.14)
-                } else {
-                    Color(hex: "E6E4E0")
-                }
+            ProfilePhoto(data: p.firstPhoto) {
+                Color(hex: "E6E4E0")
             }
             .frame(width: 132, height: 168)
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))

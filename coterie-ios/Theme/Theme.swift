@@ -215,6 +215,24 @@ struct LogoMark: View {
     }
 }
 
+// MARK: - Profile photo
+
+/// Renders an uploaded profile photo (JPEG `Data`), or a placeholder when empty.
+struct ProfilePhoto<Placeholder: View>: View {
+    var data: Data?
+    @ViewBuilder var placeholder: () -> Placeholder
+
+    var body: some View {
+        if let data, let image = UIImage(data: data) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+        } else {
+            placeholder()
+        }
+    }
+}
+
 // MARK: - Pulsing rings
 
 /// Two expanding rings around a centre dot — a soft "listening / searching"

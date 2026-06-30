@@ -35,7 +35,7 @@ If "iPhone 17" isn't available, list devices with `xcrun simctl list devices ava
 - **Theme defaults to System** (follows the device); user can override to Light/Dark.
 - **Bundle id** `com.datecotorie.app`; **display name** `Circle`. The Xcode target/
   folder is still named `coterie-ios` (cosmetic legacy).
-- **Photos are placeholders** (`PortraitGradient`/`PortraitSeed`), not real images.
+- **User photos are real uploads** — `PhotosPicker` → `AppState.setPhoto` (downscaled JPEG `Data` in `UserProfile.photos`, persisted in `UserDefaults`); rendered via `ProfilePhoto`. Only **other people's** photos (`Member.portrait`) are still `PortraitGradient` placeholders.
 - Keep `CTData.interests` and `CTData.prompts` in sync with any backend vocabulary,
   or matching/filtering breaks silently.
 

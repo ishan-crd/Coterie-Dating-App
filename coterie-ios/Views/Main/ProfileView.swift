@@ -55,9 +55,12 @@ struct ProfileView: View {
 
     private var portraitCard: some View {
         ZStack(alignment: .bottomLeading) {
-            let seed = app.ownPortrait
-            PortraitGradient(lx: seed.lx, ly: seed.ly, mood: app.mood)
-            Grain(opacity: 0.13)
+            ProfilePhoto(data: p.firstPhoto) {
+                ZStack {
+                    PortraitGradient(lx: 50, ly: 16, mood: app.mood)
+                    Grain(opacity: 0.13)
+                }
+            }
             LinearGradient(colors: [.clear, .black.opacity(0.1), .black.opacity(0.64)],
                            startPoint: .init(x: 0.5, y: 0.44), endPoint: .bottom)
             VStack(alignment: .leading, spacing: 9) {

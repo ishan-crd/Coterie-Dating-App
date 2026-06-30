@@ -9,6 +9,7 @@
 
 import SwiftUI
 import Combine
+import UIKit
 
 @MainActor
 final class AppState: ObservableObject {
@@ -196,13 +197,31 @@ final class AppState: ObservableObject {
         withAnimation(.easeOut(duration: 0.5)) { stage = .app; tab = .today }
     }
 
-    func togglePhoto(_ index: Int) {
-        if profile.photos[index] != nil {
-            profile.photos[index] = nil
-        } else {
-            let p = CTData.photoPositions[index]
-            profile.photos[index] = PortraitSeedCodable(lx: p.lx, ly: p.ly)
+    /// Store an uploaded image into a slot, downscaling/recompressing first so
+    /// the persisted profile stays small.
+    func setPhoto(_ index: Int, _ data: Data) {
+        guard profile.photos.indices.contains(index) else { return }
+        profile.photos[index] = Self.downscaledJPEG(data) ?? data
+    }
+
+    func removePhoto(_ index: Int) {
+        guard profile.photos.indices.contains(index) else { return }
+        profile.photos[index] = nil
+    }
+
+    /// Resize to a sane max dimension and re-encode as JPEG.
+    static func downscaledJPEG(_ data: Data, maxDimension: CGFloat = 1080,
+                               quality: CGFloat = 0.72) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+        let longest = max(image.size.width, image.size.height)
+        let scale = longest > maxDimension ? maxDimension / longest : 1
+        let target = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.opaque = true
+        let resized = UIGraphicsImageRenderer(size: target, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: target))
         }
+        return resized.jpegData(compressionQuality: quality)
     }
 
     func toggleInterest(_ tag: String) {
@@ -211,11 +230,6 @@ final class AppState: ObservableObject {
         } else {
             profile.interests.append(tag)
         }
-    }
-
-    /// The portrait used for the user's own profile (first photo, or a default).
-    var ownPortrait: PortraitSeed {
-        profile.firstPhoto?.seed ?? PortraitSeed(lx: 50, ly: 16)
     }
 
     func saveProfileEdits() {
