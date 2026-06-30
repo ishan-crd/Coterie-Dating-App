@@ -2,8 +2,9 @@
 //  TodayView.swift
 //  coterie-ios
 //
-//  Explore: find people who share your interests. Choose the topics you care
-//  about, then like or pass — five likes a day.
+//  Explore: one person at a time, shown as a full scrolling profile — their
+//  photos and prompts interleaved. Topic filters pin to the top; the pass / like
+//  controls float statically over the scroll. Five likes a day.
 //
 
 import SwiftUI
@@ -14,75 +15,43 @@ struct TodayView: View {
     private var candidate: Member? { app.exploreCandidates.first }
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 0) {
-                header
-                Text("Find your people.")
-                    .font(.serif(33)).lineSpacing(3)
-                    .padding(.top, 6).padding(.bottom, 16)
+        VStack(spacing: 0) {
+            topBar
 
-                likesPill
-                topicFilter
-
-                if let candidate {
-                    PersonCard(member: candidate, shared: app.sharedInterests(candidate))
+            if let candidate {
+                ZStack(alignment: .bottom) {
+                    ProfileScroll(member: candidate, shared: app.sharedInterests(candidate))
                         .id(candidate.id)
-                        .transition(.asymmetric(insertion: .opacity,
-                                                removal: .scale(scale: 0.92).combined(with: .opacity)))
-                        .padding(.top, 18)
-                    actionRow(for: candidate)
-                        .padding(.top, 18)
-                } else {
-                    emptyState.padding(.top, 30)
+                        .transition(.opacity)
+                    floatingActions(for: candidate)
+                }
+                .animation(.easeOut(duration: 0.3), value: candidate.id)
+            } else {
+                Spacer()
+                emptyState
+                Spacer()
+            }
+        }
+        .background(CT.paper.ignoresSafeArea())
+    }
+
+    // MARK: Top bar — name + horizontal topic filters
+
+    private var topBar: some View {
+        VStack(spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                LogoMark(height: 20)
+                Spacer()
+                HStack(spacing: 6) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 9, weight: .semibold)).foregroundStyle(CT.accent)
+                    Text(app.likesRemaining == 1 ? "1 like left" : "\(app.likesRemaining) likes left")
+                        .font(.grotesk(10.5, weight: .medium)).tracking(1.4)
+                        .textCase(.uppercase).foregroundStyle(CT.muted)
                 }
             }
             .padding(.horizontal, 22)
-            .padding(.bottom, 120)
-            .animation(.easeOut(duration: 0.3), value: candidate?.id)
-        }
-        .safeAreaPadding(.top, 8)
-    }
 
-    // MARK: Header
-
-    private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(dateString).eyebrow(CT.muted, tracking: 2.6)
-            Spacer()
-            LogoMark(height: 19)
-        }
-        .padding(.top, 18).padding(.bottom, 4)
-    }
-
-    private var dateString: String {
-        let f = DateFormatter()
-        f.dateFormat = "EEEE, MMMM d"
-        return f.string(from: Date())
-    }
-
-    // MARK: Likes allowance
-
-    private var likesPill: some View {
-        HStack(spacing: 7) {
-            Image(systemName: "heart.fill")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(CT.accent)
-            Text(app.likesRemaining == 1 ? "1 like left today"
-                                         : "\(app.likesRemaining) likes left today")
-                .font(.grotesk(12, weight: .medium)).tracking(0.4)
-                .foregroundStyle(CT.ink80)
-        }
-        .padding(.horizontal, 14).padding(.vertical, 9)
-        .background(CT.accentSoft)
-        .clipShape(Capsule())
-    }
-
-    // MARK: Topic filter
-
-    private var topicFilter: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Show me people into").eyebrow(CT.muted, tracking: 2.2)
-                .padding(.top, 22)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 9) {
                     ChoiceChip(label: "Everyone", selected: app.exploreTopics.isEmpty,
@@ -92,47 +61,50 @@ struct TodayView: View {
                                    fontSize: 13, hPad: 16, vPad: 9) { app.toggleTopic(topic) }
                     }
                 }
+                .padding(.horizontal, 22)
                 .padding(.vertical, 2)
             }
         }
+        .padding(.top, 6)
+        .padding(.bottom, 12)
+        .background(
+            CT.paper
+                .overlay(alignment: .bottom) { Rectangle().fill(CT.hairlineSoft).frame(height: 1) }
+        )
     }
 
-    // MARK: Action row
+    // MARK: Static pass / like controls
 
-    private func actionRow(for member: Member) -> some View {
-        HStack(spacing: 14) {
+    private func floatingActions(for member: Member) -> some View {
+        HStack {
             Button { app.passMember(member.id) } label: {
-                circleAction(system: "xmark", filled: false)
+                actionCircle(system: "xmark", filled: false)
             }
             .buttonStyle(PressableStyle(scale: 0.9))
 
+            Spacer()
+
             Button { app.likeMember(member.id) } label: {
-                circleAction(system: "heart.fill", filled: true)
+                actionCircle(system: "heart.fill", filled: true)
             }
             .buttonStyle(PressableStyle(scale: 0.9))
             .disabled(app.likesRemaining == 0)
             .opacity(app.likesRemaining == 0 ? 0.4 : 1)
         }
-        .frame(maxWidth: .infinity)
-        .overlay(alignment: .center) {
-            if app.likesRemaining == 0 {
-                Text("Out of likes — back tomorrow")
-                    .font(.grotesk(11, weight: .medium)).tracking(0.5)
-                    .foregroundStyle(CT.muted)
-                    .offset(y: 44)
-            }
-        }
+        .padding(.horizontal, 30)
+        .padding(.bottom, 92)   // sit above the frosted tab bar
     }
 
-    private func circleAction(system: String, filled: Bool) -> some View {
+    private func actionCircle(system: String, filled: Bool) -> some View {
         Image(systemName: system)
-            .font(.system(size: 22, weight: .semibold))
+            .font(.system(size: 23, weight: .semibold))
             .foregroundStyle(filled ? CT.accentInk : CT.ink70)
-            .frame(width: 64, height: 64)
-            .background(filled ? CT.accent : CT.surface)
-            .clipShape(Circle())
+            .frame(width: 62, height: 62)
+            .background(
+                Circle().fill(filled ? AnyShapeStyle(CT.accent) : AnyShapeStyle(.ultraThinMaterial))
+            )
             .overlay(Circle().stroke(filled ? Color.clear : CT.border, lineWidth: 1))
-            .shadow(color: .black.opacity(filled ? 0.25 : 0.08), radius: 14, x: 0, y: 8)
+            .shadow(color: .black.opacity(0.22), radius: 16, x: 0, y: 8)
     }
 
     // MARK: Empty state
@@ -156,54 +128,151 @@ struct TodayView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 30)
+        .padding(.horizontal, 22)
     }
 }
 
-// MARK: - Person card
+// MARK: - Scrolling profile (photos + prompts interleaved)
 
-private struct PersonCard: View {
+private struct ProfileScroll: View {
     @EnvironmentObject var app: AppState
     var member: Member
     var shared: [String]
 
-    var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            PortraitGradient(lx: member.portrait.lx, ly: member.portrait.ly, mood: app.mood)
-            Grain(opacity: 0.13)
-            LinearGradient(colors: [.clear, .black.opacity(0.1), .black.opacity(0.7)],
-                           startPoint: .init(x: 0.5, y: 0.38), endPoint: .bottom)
-
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("\(member.name) · \(member.age)")
-                        .font(.serif(38)).foregroundStyle(.white)
-                    Text("\(member.role) · \(member.city)")
-                        .font(.grotesk(11, weight: .regular)).tracking(2.2)
-                        .textCase(.uppercase).foregroundStyle(.white.opacity(0.82))
-                }
-                interestTags
-            }
-            .padding(24)
-        }
-        .frame(height: 452)
-        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-        .shadow(color: .black.opacity(0.42), radius: 32, x: 0, y: 24)
+    /// A few portrait framings derived from the member's light source, standing
+    /// in for a set of photos.
+    private var photoSeeds: [PortraitSeed] {
+        let s = member.portrait
+        func clamp(_ v: Double) -> Double { min(92, max(8, v)) }
+        return [
+            s,
+            PortraitSeed(lx: clamp(100 - s.lx), ly: clamp(s.ly + 22)),
+            PortraitSeed(lx: clamp(s.lx + 16), ly: clamp(100 - s.ly)),
+        ]
     }
 
-    private var interestTags: some View {
-        FlowLayout(spacing: 8) {
-            ForEach(member.interests, id: \.self) { tag in
-                let isShared = shared.contains(tag)
-                Text(tag)
-                    .font(.grotesk(12, weight: isShared ? .semibold : .regular))
-                    .foregroundStyle(isShared ? CT.accentInk : .white)
-                    .padding(.horizontal, 13).padding(.vertical, 7)
-                    .background(isShared ? AnyShapeStyle(CT.accent)
-                                         : AnyShapeStyle(.ultraThinMaterial))
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(.white.opacity(isShared ? 0 : 0.3), lineWidth: 1))
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 16) {
+                nameHeader
+
+                photo(photoSeeds[0])
+
+                if !shared.isEmpty { sharedCard }
+
+                if member.prompts.indices.contains(0) {
+                    promptCard(member.prompts[0])
+                }
+
+                photo(photoSeeds[1])
+
+                aboutCard
+
+                if member.prompts.indices.contains(1) {
+                    promptCard(member.prompts[1])
+                }
+
+                photo(photoSeeds[2])
+
+                interestsCard
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 16)
+            .padding(.bottom, 110)   // clear the floating controls
+        }
+    }
+
+    // MARK: Header
+
+    private var nameHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(member.name).font(.serif(40))
+                Text("\(member.age)").font(.serif(28)).foregroundStyle(CT.body)
+                Spacer()
+            }
+            HStack(spacing: 8) {
+                Circle().fill(Color.green).frame(width: 7, height: 7)
+                Text("Active today")
+                    .font(.grotesk(11, weight: .medium)).tracking(1.0).foregroundStyle(CT.muted)
+                Text("·").foregroundStyle(CT.faint)
+                Text("\(member.role) · \(member.city)")
+                    .font(.grotesk(11, weight: .regular)).tracking(0.6).foregroundStyle(CT.muted)
             }
         }
+        .padding(.horizontal, 4)
+    }
+
+    // MARK: Photo panel
+
+    private func photo(_ seed: PortraitSeed) -> some View {
+        ZStack {
+            PortraitGradient(lx: seed.lx, ly: seed.ly, mood: app.mood)
+            Grain(opacity: 0.13)
+        }
+        .frame(height: 460)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .shadow(color: .black.opacity(0.18), radius: 18, x: 0, y: 12)
+    }
+
+    // MARK: Cards
+
+    private func promptCard(_ prompt: PromptAnswer) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(prompt.q).eyebrow(CT.muted, tracking: 2.4)
+            Text(prompt.a).font(.serif(27)).foregroundStyle(CT.ink90).lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(22)
+        .background(CT.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(CT.border, lineWidth: 1))
+    }
+
+    private var aboutCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("About").eyebrow(CT.muted, tracking: 2.4)
+            Text(member.bio).serifItalic(22).foregroundStyle(CT.ink80).lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(22)
+        .background(CT.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(CT.border, lineWidth: 1))
+    }
+
+    private var sharedCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("What you share").eyebrow(CT.accent, tracking: 2.4)
+            FlowLayout(spacing: 8) {
+                ForEach(shared, id: \.self) { tag in
+                    Text(tag)
+                        .font(.grotesk(12, weight: .semibold))
+                        .foregroundStyle(CT.accentInk)
+                        .padding(.horizontal, 13).padding(.vertical, 7)
+                        .background(CT.accent).clipShape(Capsule())
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(22)
+        .background(CT.accentSoft)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    private var interestsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Into").eyebrow(CT.muted, tracking: 2.4)
+            FlowLayout(spacing: 8) {
+                ForEach(member.interests, id: \.self) { TagPill(text: $0) }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(22)
+        .background(CT.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(CT.border, lineWidth: 1))
     }
 }
