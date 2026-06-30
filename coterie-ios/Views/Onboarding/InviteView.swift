@@ -33,9 +33,7 @@ struct InviteView: View {
                 Spacer()
 
                 VStack(spacing: 0) {
-                    Text("Coterie")
-                        .font(.serif(62))
-                        .tracking(2.5)
+                    LogoMark(height: 54)
                     Text("Introductions, made with intention.")
                         .serifItalic(18)
                         .foregroundStyle(CT.bodyLight)

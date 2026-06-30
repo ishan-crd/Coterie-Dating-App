@@ -40,7 +40,7 @@ struct TodayView: View {
         HStack(alignment: .firstTextBaseline) {
             Text(dateString).eyebrow(CT.muted, tracking: 2.6)
             Spacer()
-            Text("Coterie").font(.serif(21)).tracking(0.8)
+            LogoMark(height: 19)
         }
         .padding(.top, 18).padding(.bottom, 4)
     }

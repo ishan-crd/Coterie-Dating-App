@@ -185,6 +185,25 @@ struct Grain: View {
     }
 }
 
+// MARK: - Brand
+
+/// The Coterie wordmark logo. Template-rendered so it adopts the theme colour
+/// (dark on light, light on dark).
+struct LogoMark: View {
+    var height: CGFloat
+    var color: Color = CT.ink
+
+    var body: some View {
+        Image("coterie-logo")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(height: height)
+            .foregroundStyle(color)
+            .accessibilityLabel("Coterie")
+    }
+}
+
 // MARK: - Reusable building blocks
 
 /// The pill button used for primary / secondary actions throughout.
