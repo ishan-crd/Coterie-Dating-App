@@ -110,8 +110,16 @@ extension View {
 
 /// The user-selectable app theme.
 enum AppearanceMode: String, CaseIterable, Codable {
-    case light = "Light", dark = "Dark"
-    var colorScheme: ColorScheme { self == .dark ? .dark : .light }
+    case system = "System", light = "Light", dark = "Dark"
+
+    /// The scheme to force, or `nil` to follow the device setting.
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light:  return .light
+        case .dark:   return .dark
+        }
+    }
 }
 
 enum PortraitMood: String, CaseIterable, Codable {
