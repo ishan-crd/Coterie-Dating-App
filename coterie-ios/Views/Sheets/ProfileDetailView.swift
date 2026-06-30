@@ -110,7 +110,7 @@ struct ProfileDetailView: View {
             .buttonStyle(PressableStyle(scale: 0.96))
             .frame(maxWidth: .infinity).layoutPriority(1)
         }
-        .padding(.horizontal, 24).padding(.top, 16).padding(.bottom, 30)
+        .padding(.horizontal, 24).padding(.top, 4).padding(.bottom, -14)
         .background(
             CT.paper.opacity(0.85).background(.ultraThinMaterial)
                 .overlay(alignment: .top) { Rectangle().fill(CT.hairline).frame(height: 1) }
