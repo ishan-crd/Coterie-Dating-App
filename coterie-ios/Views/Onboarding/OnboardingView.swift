@@ -527,9 +527,9 @@ private struct ReviewStep: View {
             ProfilePhoto(data: p.firstPhoto) {
                 Color(hex: "E6E4E0")
             }
-            .frame(width: 132, height: 168)
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .shadow(color: .black.opacity(0.45), radius: 25, x: 0, y: 20)
+            .frame(width: 230, height: 294)
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .shadow(color: .black.opacity(0.45), radius: 28, x: 0, y: 22)
 
             Text(p.name + (p.age.map { ", \($0)" } ?? ""))
                 .font(.serif(40)).multilineTextAlignment(.center).padding(.top, 26)
@@ -541,12 +541,12 @@ private struct ReviewStep: View {
             Rectangle().fill(CT.border).frame(width: 34, height: 1)
                 .padding(.vertical, 26)
 
-            Text("Your introduction is ready. From here, we’ll show you one person a day — and show you to a few who’ll be glad to know you.")
+            Text("Your introduction is ready.")
                 .font(.grotesk(15)).foregroundStyle(CT.body).multilineTextAlignment(.center)
                 .lineSpacing(5).frame(maxWidth: 280)
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 14)
+        .padding(.top, 90)
     }
 }
 
