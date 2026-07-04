@@ -34,11 +34,21 @@
 		E429214A2FF1078400DCE9A5 /* coterie-iosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "coterie-iosUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E45ABA5E0000000000000021 /* Exceptions for "coterie-ios" folder in "coterie-ios" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E42921302FF1078100DCE9A5 /* coterie-ios */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		E42921332FF1078200DCE9A5 /* coterie-ios */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				E45ABA5E0000000000000021 /* Exceptions */,
+				E45ABA5E0000000000000021 /* Exceptions for "coterie-ios" folder in "coterie-ios" target */,
 			);
 			path = "coterie-ios";
 			sourceTree = "<group>";
@@ -54,16 +64,6 @@
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		E45ABA5E0000000000000021 /* Exceptions */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = E42921302FF1078100DCE9A5 /* coterie-ios */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		E429212E2FF1078100DCE9A5 /* Frameworks */ = {

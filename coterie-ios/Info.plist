@@ -9,6 +9,8 @@
 	  com.googleusercontent.apps.1234567890-abcdef). This is just your client ID
 	  with the two halves swapped.
 	-->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Circle uses your location to set where you’re based and help you find people nearby.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

@@ -345,16 +345,9 @@ private struct CityStep: View {
     var body: some View {
         VStack(alignment: .leading) {
             StepHeading(title: "Where are you based?",
-                        subtitle: "We introduce members city by city.")
-            UnderlineField(placeholder: "Your city", text: app.bind(\.city), fontSize: 28)
-                .padding(.top, 30)
-            FlowLayout(spacing: 9) {
-                ForEach(CTData.cities, id: \.self) { c in
-                    ChoiceChip(label: c, selected: app.profile.city == c,
-                               fontSize: 12.5, hPad: 16, vPad: 9) { app.profile.city = c }
-                }
-            }
-            .padding(.top, 24)
+                        subtitle: "Detect your spot, or drag the map to place yourself.")
+            LocationPicker(city: app.bind(\.city))
+                .padding(.top, 26)
         }
     }
 }
