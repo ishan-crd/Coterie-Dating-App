@@ -48,7 +48,7 @@ struct EditProfileView: View {
 
                     label("Interests").padding(.top, 28)
                     FlowLayout(spacing: 9) {
-                        ForEach(CTData.interests, id: \.self) { t in
+                        ForEach(app.interestLabels, id: \.self) { t in
                             ChoiceChip(label: t, selected: app.profile.interests.contains(t),
                                        fontSize: 13, hPad: 16, vPad: 10) { app.toggleInterest(t) }
                         }

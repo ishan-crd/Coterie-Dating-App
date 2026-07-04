@@ -7,14 +7,6 @@
 
 import Foundation
 
-// MARK: - App stage
-
-enum AppStage {
-    case invite
-    case onboarding
-    case app
-}
-
 // MARK: - Member (someone you can be introduced to)
 
 struct PromptAnswer: Identifiable, Hashable {

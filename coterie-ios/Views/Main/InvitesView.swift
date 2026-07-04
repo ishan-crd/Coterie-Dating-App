@@ -14,18 +14,29 @@ struct InvitesView: View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Invitations").eyebrow(CT.muted, tracking: 2.6).padding(.top, 18).padding(.bottom, 4)
-                Text("Asked for you").font(.serif(33)).lineSpacing(2)
-                Text("A few members have requested an introduction. Accept only what feels right.")
+                Text("They liked you").font(.serif(33)).lineSpacing(2)
+                Text("People who'd like to be your friend. Like them back to connect.")
                     .font(.grotesk(14)).foregroundStyle(CT.bodyLight).lineSpacing(3)
                     .frame(maxWidth: 282, alignment: .leading)
                     .padding(.top, 4).padding(.bottom, 26)
 
-                ForEach(CTData.invitations) { invite in
-                    if let member = CTData.member(invite.id) {
-                        Button { app.openProfile(member.id) } label: {
-                            InviteRow(member: member, invite: invite, mood: app.mood)
+                if app.invitations.isEmpty {
+                    VStack(spacing: 20) {
+                        PulseRings(color: CT.accent, size: 64)
+                        Text("No new likes yet — they'll appear here.")
+                            .font(.grotesk(14)).foregroundStyle(CT.muted)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 70)
+                } else {
+                    ForEach(app.invitations) { invite in
+                        if let member = app.member(invite.id) {
+                            Button { app.openProfile(member.id) } label: {
+                                InviteRow(member: member, invite: invite, mood: app.mood,
+                                          photo: app.memberPhotos[member.id]?.first)
+                            }
+                            .buttonStyle(PressableStyle(scale: 0.99))
                         }
-                        .buttonStyle(PressableStyle(scale: 0.99))
                     }
                 }
             }
@@ -40,14 +51,17 @@ private struct InviteRow: View {
     var member: Member
     var invite: Invitation
     var mood: PortraitMood
+    var photo: Data? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
-            ZStack(alignment: .bottom) {
-                PortraitGradient(lx: member.portrait.lx, ly: member.portrait.ly, mood: mood)
-                Grain(opacity: 0.14)
-                LinearGradient(colors: [.clear, .black.opacity(0.3)],
-                               startPoint: .init(x: 0.5, y: 0.55), endPoint: .bottom)
+            ProfilePhoto(data: photo) {
+                ZStack(alignment: .bottom) {
+                    PortraitGradient(lx: member.portrait.lx, ly: member.portrait.ly, mood: mood)
+                    Grain(opacity: 0.14)
+                    LinearGradient(colors: [.clear, .black.opacity(0.3)],
+                                   startPoint: .init(x: 0.5, y: 0.55), endPoint: .bottom)
+                }
             }
             .frame(width: 92, height: 118)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))

@@ -12,7 +12,7 @@ struct ChatView: View {
     var memberID: String
     @State private var draft = ""
 
-    private var member: Member? { CTData.member(memberID) }
+    private var member: Member? { app.member(memberID) }
     private var convo: Conversation? { app.conversations[memberID] }
 
     var body: some View {
@@ -34,9 +34,11 @@ struct ChatView: View {
             }
             .buttonStyle(PressableStyle(scale: 0.9))
             if let member {
-                ZStack {
-                    PortraitGradient(lx: member.portrait.lx, ly: member.portrait.ly, mood: app.mood)
-                    Grain(opacity: 0.14)
+                ProfilePhoto(data: app.memberPhotos[memberID]?.first) {
+                    ZStack {
+                        PortraitGradient(lx: member.portrait.lx, ly: member.portrait.ly, mood: app.mood)
+                        Grain(opacity: 0.14)
+                    }
                 }
                 .frame(width: 40, height: 40).clipShape(Circle())
                 VStack(alignment: .leading, spacing: 2) {
@@ -61,7 +63,7 @@ struct ChatView: View {
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 10) {
-                    Text("Connected through Circle")
+                    Text("You're friends on Circle")
                         .font(.grotesk(10.5, weight: .regular)).tracking(2.0).textCase(.uppercase)
                         .foregroundStyle(CT.faint).padding(.bottom, 12)
 

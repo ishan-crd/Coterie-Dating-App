@@ -20,7 +20,7 @@ struct ProfileView: View {
                     .padding(.top, 16)
 
                 ForEach(p.prompts.filter { !$0.answer.isEmpty }) { resp in
-                    promptSection(CTData.promptText(resp.promptId) ?? "", resp.answer)
+                    promptSection(app.promptQuestion(resp.promptId) ?? "", resp.answer)
                 }
                 if !p.interests.isEmpty { interestsSection }
 

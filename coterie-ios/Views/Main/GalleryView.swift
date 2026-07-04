@@ -20,12 +20,23 @@ struct GalleryView: View {
                     .frame(maxWidth: 280, alignment: .leading)
                     .padding(.top, 4).padding(.bottom, 24)
 
-                ForEach(CTData.members) { member in
-                    Button { app.openProfile(member.id) } label: {
-                        GalleryCard(member: member, mood: app.mood)
+                if app.feed.isEmpty {
+                    VStack(spacing: 20) {
+                        PulseRings(color: CT.accent, size: 64)
+                        Text(app.feedLoading ? "Gathering people…" : "No one new right now.")
+                            .font(.grotesk(14)).foregroundStyle(CT.muted)
                     }
-                    .buttonStyle(PressableStyle(scale: 0.985))
-                    .padding(.bottom, 26)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 80)
+                } else {
+                    ForEach(app.feed) { member in
+                        Button { app.openProfile(member.id) } label: {
+                            GalleryCard(member: member, mood: app.mood,
+                                        photo: app.memberPhotos[member.id]?.first)
+                        }
+                        .buttonStyle(PressableStyle(scale: 0.985))
+                        .padding(.bottom, 26)
+                    }
                 }
             }
             .padding(.horizontal, 22)
@@ -38,11 +49,16 @@ struct GalleryView: View {
 private struct GalleryCard: View {
     var member: Member
     var mood: PortraitMood
+    var photo: Data? = nil
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            PortraitGradient(lx: member.portrait.lx, ly: member.portrait.ly, mood: mood)
-            Grain(opacity: 0.13)
+            ProfilePhoto(data: photo) {
+                ZStack {
+                    PortraitGradient(lx: member.portrait.lx, ly: member.portrait.ly, mood: mood)
+                    Grain(opacity: 0.13)
+                }
+            }
             LinearGradient(colors: [.clear, .black.opacity(0.08), .black.opacity(0.62)],
                            startPoint: .init(x: 0.5, y: 0.42), endPoint: .bottom)
 

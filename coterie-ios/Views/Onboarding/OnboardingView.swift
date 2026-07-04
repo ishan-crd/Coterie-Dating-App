@@ -406,7 +406,7 @@ struct PromptComposer: View {
     private func answeredCard(_ resp: PromptResponse) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
-                Text(CTData.promptText(resp.promptId) ?? "")
+                Text(app.promptQuestion(resp.promptId) ?? "")
                     .eyebrow(CT.accent, tracking: 2.0)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Button { withAnimation { app.removePrompt(resp.id) } } label: {
@@ -490,7 +490,7 @@ private struct InterestsStep: View {
         VStack(alignment: .leading) {
             StepHeading(title: "What moves you?", subtitle: "Choose at least three.")
             FlowLayout(spacing: 9) {
-                ForEach(CTData.interests, id: \.self) { t in
+                ForEach(app.interestLabels, id: \.self) { t in
                     ChoiceChip(label: t, selected: app.profile.interests.contains(t),
                                fontSize: 13, hPad: 16, vPad: 10) { app.toggleInterest(t) }
                 }
@@ -536,18 +536,3 @@ private struct ReviewStep: View {
     }
 }
 
-// MARK: - AppState binding helpers
-
-extension AppState {
-    /// A two-way binding into a string field of the profile.
-    func bind(_ keyPath: WritableKeyPath<UserProfile, String>) -> Binding<String> {
-        Binding(get: { self.profile[keyPath: keyPath] },
-                set: { self.profile[keyPath: keyPath] = $0 })
-    }
-
-    /// A binding that keeps only digits, capped at `limit` characters.
-    func digitBind(_ keyPath: WritableKeyPath<UserProfile, String>, _ limit: Int) -> Binding<String> {
-        Binding(get: { self.profile[keyPath: keyPath] },
-                set: { self.profile[keyPath: keyPath] = String($0.filter(\.isNumber).prefix(limit)) })
-    }
-}

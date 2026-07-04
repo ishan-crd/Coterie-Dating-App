@@ -12,7 +12,7 @@ struct ProfileDetailView: View {
     @EnvironmentObject var app: AppState
     var memberID: String
 
-    private var member: Member? { CTData.member(memberID) }
+    private var member: Member? { app.member(memberID) }
 
     var body: some View {
         ZStack {
@@ -33,8 +33,12 @@ struct ProfileDetailView: View {
 
     private func hero(_ member: Member) -> some View {
         ZStack(alignment: .bottomLeading) {
-            PortraitGradient(lx: member.portrait.lx, ly: member.portrait.ly, mood: app.mood)
-            Grain(opacity: 0.13)
+            ProfilePhoto(data: app.memberPhotos[member.id]?.first) {
+                ZStack {
+                    PortraitGradient(lx: member.portrait.lx, ly: member.portrait.ly, mood: app.mood)
+                    Grain(opacity: 0.13)
+                }
+            }
             LinearGradient(colors: [.black.opacity(0.18), .clear, .clear, .black.opacity(0.6)],
                            startPoint: .top, endPoint: .bottom)
 
@@ -50,6 +54,7 @@ struct ProfileDetailView: View {
             .padding(26)
         }
         .frame(height: 486)
+        .clipped()
         .overlay(alignment: .topLeading) {
             Button { app.closeSheet() } label: {
                 Image(systemName: "xmark").font(.system(size: 16, weight: .semibold))
@@ -100,15 +105,23 @@ struct ProfileDetailView: View {
 
     private func footer(_ member: Member) -> some View {
         HStack(spacing: 12) {
-            Button { app.closeSheet() } label: {
+            Button {
+                app.passMember(member.id)
+                app.closeSheet()
+            } label: {
                 sheetAction("Pass", filled: false)
             }
             .buttonStyle(PressableStyle(scale: 0.96))
-            Button { app.openChat(with: member.id) } label: {
-                sheetAction("Introduce Yourself", filled: true)
+            Button {
+                app.likeMember(member.id)
+                app.closeSheet()
+            } label: {
+                sheetAction("Say Hi", filled: true)
             }
             .buttonStyle(PressableStyle(scale: 0.96))
             .frame(maxWidth: .infinity).layoutPriority(1)
+            .disabled(app.likesRemaining == 0)
+            .opacity(app.likesRemaining == 0 ? 0.4 : 1)
         }
         .padding(.horizontal, 24).padding(.top, 4).padding(.bottom, -14)
         .background(

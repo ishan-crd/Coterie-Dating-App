@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import GoogleSignIn
 
 @main
 struct coterie_iosApp: App {
@@ -15,6 +16,9 @@ struct coterie_iosApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(app)
+                .onOpenURL { url in
+                    _ = GoogleAuth.handle(url)
+                }
         }
     }
 }

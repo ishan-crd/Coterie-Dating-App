@@ -2,8 +2,8 @@
 //  RootView.swift
 //  coterie-ios
 //
-//  Top-level router. Switches between the invitation flow, onboarding and the
-//  main app based on the session stage held in AppState.
+//  Top-level router. Switches between loading, auth, onboarding and the main
+//  app based on the session stage held in AppState.
 //
 
 import SwiftUI
@@ -16,8 +16,14 @@ struct RootView: View {
             CT.paper.ignoresSafeArea()
 
             switch app.stage {
-            case .invite:
-                InviteView()
+            case .loading:
+                VStack(spacing: 24) {
+                    LogoMark(height: 34)
+                    PulseRings(color: CT.accent, size: 56)
+                }
+                .transition(.opacity)
+            case .auth:
+                AuthView()
                     .transition(.opacity)
             case .onboarding:
                 OnboardingView()

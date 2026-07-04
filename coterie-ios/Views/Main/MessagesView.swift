@@ -16,12 +16,23 @@ struct MessagesView: View {
                 Text("Messages").eyebrow(CT.muted, tracking: 2.6).padding(.top, 18).padding(.bottom, 4)
                 Text("Conversations").font(.serif(33)).lineSpacing(2).padding(.bottom, 22)
 
-                ForEach(app.conversationOrder, id: \.self) { id in
-                    if let convo = app.conversations[id], let member = CTData.member(id) {
-                        Button { app.openChat(with: id) } label: {
-                            ConversationRow(member: member, convo: convo, mood: app.mood)
+                if app.conversationOrder.isEmpty {
+                    VStack(spacing: 20) {
+                        PulseRings(color: CT.accent, size: 64)
+                        Text("Match with someone to start talking.")
+                            .font(.grotesk(14)).foregroundStyle(CT.muted)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 80)
+                } else {
+                    ForEach(app.conversationOrder, id: \.self) { id in
+                        if let convo = app.conversations[id], let member = app.member(id) {
+                            Button { app.openChat(with: id) } label: {
+                                ConversationRow(member: member, convo: convo, mood: app.mood,
+                                                photo: app.memberPhotos[id]?.first)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -36,12 +47,15 @@ private struct ConversationRow: View {
     var member: Member
     var convo: Conversation
     var mood: PortraitMood
+    var photo: Data? = nil
 
     var body: some View {
         HStack(spacing: 16) {
-            ZStack {
-                PortraitGradient(lx: member.portrait.lx, ly: member.portrait.ly, mood: mood)
-                Grain(opacity: 0.14)
+            ProfilePhoto(data: photo) {
+                ZStack {
+                    PortraitGradient(lx: member.portrait.lx, ly: member.portrait.ly, mood: mood)
+                    Grain(opacity: 0.14)
+                }
             }
             .frame(width: 58, height: 58)
             .clipShape(Circle())

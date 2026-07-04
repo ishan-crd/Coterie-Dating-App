@@ -15,23 +15,23 @@
 - **Name:** Circle (display name `Circle`; the Xcode target is still `coterie-ios` — see §11 for the rename caveats).
 - **Tagline:** "Find friends who share your world."
 - **Core loop:** A user onboards (builds a profile of name, age, photos, city, work, prompts, interests), then on the **Explore / Today** page sees other people one at a time as a full scrolling profile. They **pass (✕)** or **like (♥)**. Likes are capped at **5 per day**. Liking someone starts a conversation that appears in **Messages**.
-- **Entry gate:** Currently invite-only via a hardcoded code (`111111`). The backend should replace this with real auth (see §8).
+- **Entry gate:** Real auth via `AuthView` — Sign in with Apple (native), Google (OAuth) and phone OTP through Supabase Auth. No invite gate.
 - **Theme:** Warm editorial design (serif display type + grotesk body) on a paper background, with a warm orange accent. Full light/dark support; **defaults to System theme**.
 
 ### Current state / maturity
-- The **frontend is a working prototype** driven entirely by **in-memory seed data** (`CTData` in `Models.swift`) and **`UserDefaults`** persistence (`Persistence.swift`). There is **no networking layer yet**.
-- **The signed-in user's own photos are REAL uploads** — picked via SwiftUI `PhotosPicker`, downscaled/recompressed to JPEG, and stored as `Data` in the profile (persisted in `UserDefaults`). See §6/§7. The backend task is to upload these and swap in remote URLs.
-- **Other people's photos (the 6 seed `Member`s) are still placeholders** — procedurally rendered gradients (`PortraitGradient`). Members are fake; replacing their `portrait` with real image URLs is a backend/frontend integration task (see §6, §7).
-- All "other people" are fake. The like/pass/match/chat flows are simulated locally (e.g. chat auto-replies from a canned pool).
+- The app is **fully wired to the live Supabase backend** (§8) via `Store/SupabaseService.swift`: real auth, real profiles, real discovery/likes/matches, real chat with realtime, real photo upload/download.
+- **User photos are real uploads** — `PhotosPicker` → downscaled JPEG `Data` in local slots → uploaded to the `photos` bucket on onboarding-complete / edit-save; other people's photos are downloaded from the bucket and cached in `AppState.memberPhotos`. `PortraitGradient` remains as the placeholder for members with no photos.
+- `CTData` is now only a **fallback vocabulary + DEBUG preview seed** (`-previewApp` etc. run fully offline).
+- **Provider setup still needed in dashboards** (user-side): Apple (bundle id in Supabase Apple provider + Sign in with Apple capability on the App ID), Google (iOS OAuth client + redirect URL `circleapp://auth-callback` in Supabase URL config), phone (SMS provider like Twilio in Supabase Auth).
 
 ---
 
 ## 2. Tech stack & project layout
 
 - **Language/UI:** Swift 5, SwiftUI. Target iOS 26.x (built & tested on iOS 26.2 simulator, iPhone 17).
-- **No external dependencies.** No SPM packages, no CocoaPods.
-- **State:** A single `@MainActor` `ObservableObject` `AppState` injected via `.environmentObject`. All screens read it with `@EnvironmentObject`.
-- **Persistence:** `UserDefaults` via the `Persistence` enum (JSON-encoded `Codable` structs).
+- **Dependencies:** one SPM package — **supabase-swift** (declared directly in `project.pbxproj`).
+- **State:** A single `@MainActor` `ObservableObject` `AppState` injected via `.environmentObject`. All screens read it with `@EnvironmentObject`. All networking goes through `Store/SupabaseService.swift`.
+- **Persistence:** server-owned data on Supabase; `UserDefaults` (via `Persistence`) keeps only local preferences (+ a local profile cache).
 - **Xcode project:** `coterie-ios.xcodeproj`. Uses **synchronized folder groups** (objectVersion 77 / `PBXFileSystemSynchronizedRootGroup`) — **any file added to a folder is automatically included in the target**; you do not edit `project.pbxproj` to add files.
 - **Bundle id:** `com.datecotorie.app` (main), `com.datecotorie.app.Tests`, `com.datecotorie.app.UITests`.
 - **Display name:** `Circle` (set via `INFOPLIST_KEY_CFBundleDisplayName` in build settings; `GENERATE_INFOPLIST_FILE = YES`, so there is no standalone Info.plist).
@@ -49,9 +49,8 @@ coterie-ios/
     RootView.swift              // Top-level router (invite / onboarding / app) + preferredColorScheme
     Components/FlowLayout.swift  // Wrapping HStack layout for chips/tags
     Onboarding/
-      InviteView.swift          // Invite-code entry (accepts 111111)
+      AuthView.swift            // Sign-in: Apple / Google / phone OTP (+ PhoneAuthSheet)
       OnboardingView.swift      // Multi-step profile builder + PromptComposer
-      WaitlistView.swift        // "Join the waitlist" path
     Main/
       MainTabView.swift         // Tab shell + GlassTabBar + fullScreenCover sheets
       TodayView.swift           // EXPLORE: scrolling profile, topic filters, like/pass
@@ -75,7 +74,8 @@ HANDOFF.md                      // this file
 ## 3. Navigation / app flow
 
 `RootView` switches on `app.stage` (`AppStage`):
-- `.invite` → `InviteView` (enter code `111111`).
+- `.loading` → logo + PulseRings while the session is checked.
+- `.auth` → `AuthView` (Apple / Google / phone).
 - `.onboarding` → `OnboardingView` (profile builder).
 - `.app` → `MainTabView` (the signed-in app).
 
@@ -90,7 +90,7 @@ On launch, `AppState.init` loads a saved profile; **if a complete profile exists
 ## 4. Domain models (`Models/Models.swift`)
 
 ### `AppStage`
-`enum AppStage { case invite, onboarding, app }`
+`enum AppStage { case loading, auth, onboarding, app }` (lives in AppState.swift)
 
 ### `Member` — someone you can be matched with (REMOTE DATA in production)
 ```swift
@@ -201,7 +201,6 @@ Six fixed `PortraitSeed`s — **now legacy/unused** (the user uploads real photo
 ### Navigation / session
 - `stage: AppStage`, `tab: MainTab`, `activeSheet: ActiveSheet?`
 - `inviteCode`, `verifying`, `inviteError`, `onboardingStep`
-- `validInviteCode = "111111"` (static) — **replace with real auth.**
 - `onInviteChanged(_:)` — validates the code locally with a fake delay. **Backend: real invite/auth check.**
 
 ### Profile
@@ -240,7 +239,7 @@ Six fixed `PortraitSeed`s — **now legacy/unused** (the user uploads real photo
 - `notifications`, `paused`, `appearance: AppearanceMode` (default `.system`). Persisted via `StoredSettings`.
 
 ### Account
-- `logout()` — clears profile + local state, returns to `.invite`.
+- `logout()` — signs out of Supabase, clears local state, returns to `.auth`.
 
 ### DEBUG preview seams
 `applyPreviewLaunchArguments()` reads launch args: `-previewApp` (jump to app with `UserProfile.sample`), `-previewTab <gallery|invites|messages|profile>`, `-previewOnboarding` + `-previewStep N`, `-previewDark`. Used for screenshots/testing.
@@ -263,40 +262,52 @@ Currently everything is local `UserDefaults` JSON:
 
 ---
 
-## 8. Backend / API surface to build
+## 8. Backend — IMPLEMENTED on Supabase
 
-The frontend currently has **no network layer**. Recommended endpoints (REST or GraphQL — your call). All authed unless noted.
+The backend is **built and live** on Supabase (project url `https://zkoweftcxxnmytnezmcf.supabase.co`). Postgres schema + RLS + RPCs + storage + realtime are all applied via migrations (`core_schema`, `interactions_matching_messaging`, `rls_policies`, `storage_and_realtime`, `seed_vocabularies`, `advisor_fixes`, `function_grants_lockdown`). **The iOS app IS wired to it** via `Store/SupabaseService.swift` (supabase-swift SPM package, publishable key baked in): auth (`AuthView` — Apple id-token / Google OAuth / phone OTP), profile sync (`pushProfile` on onboarding-complete & edit-save, photos uploaded to the bucket from dirty slots), discovery (`refreshFeed` → `get_discovery_feed`), like/pass (`act_on_profile`), likers (`get_likers`), matches+messages (`refreshConversations` + realtime channel on `messages` inserts). `CTData` remains only as vocab fallback and DEBUG preview seed (`-previewApp`/`-previewOnboarding`/`-previewAuth` skip networking entirely).
 
-### Auth / onboarding
-- `POST /auth/verify-invite` `{ code }` → `{ valid, token? }` (replaces `validInviteCode`).
-- `POST /auth/session` (sign in / sign up) → `{ token, profileComplete }`.
-- `GET /me` → `UserProfile`.
-- `PUT /me` → update profile (name, dob, city, work, pronouns, prompts, interests).
-- `POST /me/photos` (multipart) → upload a photo; returns an image URL/id. `DELETE /me/photos/{id}`. The client already captures real images (`UserProfile.photos: [Data?]` via `PhotosPicker` + `AppState.setPhoto`); wire the upload into `setPhoto` and replace local `Data` with the returned URL.
+### Auth
+Supabase Auth. Use **Google / Apple sign-in** (configure providers in dashboard → Authentication → Providers; no invite gate). On signup, a DB trigger (`handle_new_user`) auto-creates a `profiles` row, pre-filling `name` from the OAuth `full_name`.
 
-### Discovery (Explore feed)
-- `GET /discovery?topics=Hiking,Music&cursor=...` → paginated `[Member]` excluding already passed/liked, ranked by shared interests. (Replaces `exploreCandidates`.)
-- `POST /interactions` `{ targetId, action: "like" | "pass" }` → `{ likesRemaining, matched?: bool, conversationId? }`. Server enforces the **5/day** like cap and resets daily.
-- `GET /likes/allowance` → `{ remaining, resetsAt }`.
+### Tables (schema `public`, all with RLS)
+| Table | Purpose | Key columns / rules |
+|---|---|---|
+| `interests` | topic vocabulary (22 seeded) | `slug` PK (e.g. `hiking`), `label` (e.g. `Hiking`), `sort_order`. Read-only to clients. |
+| `prompts` | prompt vocabulary (22 seeded) | `id` PK (e.g. `sunday`), `question`, `sort_order`, `active`. Read-only to clients. |
+| `profiles` | 1:1 with `auth.users` | `id` PK→auth.users, `name`, `birthdate` (date), `pronouns`, `city`, `work`, `bio`, `onboarding_complete`, `paused`, `notifications`. All signed-in users can SELECT; only owner can INSERT/UPDATE. |
+| `profile_photos` | photo slots | `profile_id`, `position` 0–5 (unique per profile), `storage_path` (`{uid}/{uuid}.jpg` in bucket `photos`). Viewable by signed-in; owner-managed. |
+| `profile_interests` | user ↔ interest | PK (`profile_id`,`interest`→interests.slug). Viewable by signed-in; owner insert/delete. |
+| `profile_prompts` | user ↔ prompt + answer | PK (`profile_id`,`prompt_id`), `answer` (≤600), `position` 0–2 (**hard cap 3**). Viewable by signed-in; owner-managed. |
+| `interactions` | one like/pass per (actor,target) | PK (`actor_id`,`target_id`), `action in ('like','pass')`. **No direct writes** — only via `act_on_profile` RPC. Users can read their own outbound rows. |
+| `matches` | mutual like | `user_a < user_b` (canonical order), unique pair. Auto-created by RPC. Participants-only read. |
+| `messages` | chat within a match | `match_id`, `sender_id`, `body` (≤2000), `read_at`. Participants read; sender must be participant; only the recipient can mark read. **Realtime enabled** (also on `matches`). |
 
-### Matches & messaging
-- `GET /conversations` → `[Conversation]` (ordered).
-- `GET /conversations/{id}/messages?cursor=...`
-- `POST /conversations/{id}/messages` `{ text }` (or WebSocket send).
-- Realtime: WebSocket/SSE for incoming messages + typing indicators (currently faked client-side).
-- Push notifications for new likes/matches/messages (there's a `notifications` preference toggle already).
+### RPCs (the client API — `supabase.rpc(...)`, authenticated-only; anon fully revoked)
+- `get_discovery_feed(p_topics text[], p_limit int)` → the Explore feed. Complete, unpaused profiles the caller hasn't interacted with; if `p_topics` is null/empty returns everyone, else only people sharing ≥1 of those interest slugs. Ranked by `shared_count` (interests shared with caller) desc, newest first. Max 50.
+- `act_on_profile(p_target uuid, p_action 'like'|'pass')` → records the interaction; **enforces the 5 likes/day cap server-side** (raises `daily like limit reached`); on mutual like auto-creates the match. Returns `{ matched, match_id, likes_remaining }`.
+- `likes_remaining()` → int, resets at UTC midnight (count of today's likes vs 5).
+- `get_likers()` → people who liked me that I haven't answered (the Invites tab).
 
-### Invites (inbound interest)
-- `GET /invitations` → `[Invitation]` (people who liked you, if product surfaces this).
+Everything else is plain PostgREST table access under RLS: read `interests`/`prompts` for vocab, upsert own `profiles` row + `profile_interests` + `profile_prompts`, select `matches`, select/insert `messages` (+ realtime subscription for live chat), select other users' `profiles`/`profile_photos`/`profile_prompts`/`profile_interests` for the profile detail view.
 
-### Reference data (optional but recommended)
-- `GET /config` → `{ interests[], prompts[], cities[], pronouns[] }` so the vocab isn't hardcoded in the client. Until then, **keep `CTData.interests` / `CTData.prompts` identical on both sides.**
+### Storage
+Bucket **`photos`** (private, 5MB limit, jpeg/png/webp). Path convention **`{auth.uid()}/{uuid}.jpg`** — policies allow any signed-in user to read, and only the owner to write/delete inside their own folder. Client uploads the already-downscaled JPEG from `AppState.setPhoto`, then inserts a `profile_photos` row with the path; render via signed/authenticated URL.
 
-### Data model mapping notes for the backend
-- `Member.portrait` (PortraitSeed gradient) → replace with `photos: [URL]`.
-- `UserProfile.photos` (6 `Data?` slots, real JPEGs) → upload each and store as `photos: [Photo/URL]` with order.
-- `UserProfile.dobD/dobM/dobY` strings → a real date; age is derived client-side today.
-- Interests/prompt ids are **strings**; keep them stable.
+### Match/likes semantics
+- Like → `act_on_profile('like')`; costs 1 of 5 daily; if target already liked you → match + both see it (matches realtime).
+- Pass → free, unlimited; removes them from your feed permanently (row in `interactions`).
+- The client's optimistic "conversation created on like" behavior should change to: **conversation appears on MATCH** (mutual like) — the `matches` row is the conversation; messages hang off `match_id`.
+
+### iOS integration (next task)
+- Add **supabase-swift** SPM package; init client with the project URL + publishable key (dashboard → Settings → API Keys).
+- Replace: `onInviteChanged` → Google/Apple `signInWithOAuth`; `completeOnboarding` → profile upsert + `onboarding_complete = true`; `exploreCandidates` → `get_discovery_feed`; `likeMember`/`passMember` → `act_on_profile`; `likesRemaining` → `likes_remaining()`; chat → `messages` table + realtime channel; photos → storage upload in `setPhoto`.
+- The client vocab (`CTData.interests` labels ↔ `interests.slug/label`, `CTData.prompts` ids ↔ `prompts.id`) is seeded **identically** in the DB; fetch from DB going forward.
+
+### Data model mapping notes
+- `Member.portrait` (PortraitSeed gradient) → other users' `profile_photos` (real URLs) once profiles are real.
+- `UserProfile.photos` (`[Data?]`) → upload to bucket + `profile_photos` rows; keep `Data` as a local cache only.
+- `UserProfile.dobD/M/Y` strings → `profiles.birthdate` (date). Age derived client-side.
+- Interest **slugs** are the DB keys (`hiking`), labels (`Hiking`) are display — the client currently uses labels as ids; map label→slug when writing `profile_interests` (or match on `label`).
 
 ---
 
@@ -377,13 +388,15 @@ The app began as an **invite-only dating app ("Coterie")** and was pivoted to a 
 
 ---
 
-## 13. Suggested next steps for the backend model
+## 13. Next steps (backend is DONE — §8; what remains is iOS integration)
 
-1. Stand up auth + `/me` profile CRUD; wire `AppState.onInviteChanged` / onboarding completion to real endpoints (keep the "returning user skips onboarding" behavior keyed off `profileComplete`).
-2. Photo backend: the user's own photo **capture is already real** (`PhotosPicker` → `AppState.setPhoto` → JPEG `Data`). Add upload-to-storage inside `setPhoto` and persist URLs instead of `Data`. Separately, replace `Member.portrait` gradients with real image URLs (use `AsyncImage`/a loader; `ProfilePhoto`/`PortraitGradient` work as placeholders).
-3. Discovery feed endpoint (`exploreCandidates` → paginated server feed by topics) + server-enforced 5/day like cap and pass/like recording with match logic.
-4. Realtime messaging (replace the simulated `send`/`replyPool`) + push notifications.
-5. Optional `/config` to serve interests/prompts/cities so vocab isn't duplicated.
-6. Resolve the dating-era leftovers in §11 with product.
+1. **Configure auth providers** in the Supabase dashboard (Google + Apple; add the iOS bundle id / redirect URL). No code needed server-side.
+2. **Add supabase-swift** to the Xcode project and create a small `SupabaseService` (client init with project URL + publishable key).
+3. **Replace the invite gate** (`InviteView`/`onInviteChanged`) with Sign in with Google/Apple; route by `profiles.onboarding_complete` (returning users skip onboarding).
+4. **Wire onboarding/edit** → `profiles` upsert, `profile_interests`, `profile_prompts`; photo upload to the `photos` bucket inside `AppState.setPhoto` + `profile_photos` rows.
+5. **Wire Explore** → `get_discovery_feed(topics)`; like/pass → `act_on_profile`; likes pill → `likes_remaining()`. Conversation should now appear on **match** (mutual like), not on like.
+6. **Wire Messages/Chat** → `matches` + `messages` with a realtime subscription (drop `replyPool` simulation). Invites tab → `get_likers()`.
+7. Push notifications for matches/messages (APNs; `profiles.notifications` toggle already exists).
+8. Resolve the dating-era leftovers in §11 with product.
 
-> Keep the client's `CTData.interests` and `CTData.prompts` **byte-for-byte in sync** with the server vocabulary until `/config` exists, or matching/filtering breaks silently.
+> The DB seeds `interests` and `prompts` **identically to `CTData`** — fetch vocab from the DB going forward; note interests use **slugs** as keys (client labels map to `interests.label`).

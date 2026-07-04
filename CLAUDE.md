@@ -30,8 +30,17 @@ If "iPhone 17" isn't available, list devices with `xcrun simctl list devices ava
 - **Design system lives in `Theme/Theme.swift`** (`CT` color tokens, `Font.serif`/
   `Font.grotesk`, shared components). Don't hardcode colors/fonts in views.
 - **Single state object:** `AppState` (`@MainActor ObservableObject`), injected via
-  `.environmentObject`, read with `@EnvironmentObject`. No networking layer yet —
-  data is seed (`CTData` in `Models.swift`) + `UserDefaults` (`Persistence.swift`).
+  `.environmentObject`, read with `@EnvironmentObject`. Fully wired to Supabase via
+  `Store/SupabaseService.swift` (supabase-swift SPM). `CTData` remains only as
+  vocab fallback + DEBUG preview data (`-previewApp` etc. skip all networking).
+- **Backend is LIVE on Supabase** (schema, RLS, RPCs, storage, realtime — see
+  HANDOFF.md §8). Supabase MCP tools are available for DB work. Key RPCs:
+  `get_discovery_feed`, `act_on_profile`, `likes_remaining`, `get_likers`.
+  Photos bucket: `photos` (`{uid}/{uuid}.jpg`).
+- **Auth:** `AuthView` (Apple native id-token, Google OAuth via
+  `circleapp://auth-callback` redirect, phone OTP). Apple needs the Sign in with
+  Apple capability (entitlements file exists); Google needs an iOS OAuth client
+  configured in the dashboard; phone OTP needs an SMS provider (e.g. Twilio).
 - **Theme defaults to System** (follows the device); user can override to Light/Dark.
 - **Bundle id** `com.datecotorie.app`; **display name** `Circle`. The Xcode target/
   folder is still named `coterie-ios` (cosmetic legacy).

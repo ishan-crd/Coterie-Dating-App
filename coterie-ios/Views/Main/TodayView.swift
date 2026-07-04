@@ -112,10 +112,12 @@ struct TodayView: View {
     private var emptyState: some View {
         VStack(spacing: 0) {
             PulseRings(color: CT.accent, size: 84).padding(.bottom, 30)
-            Text(app.exploreTopics.isEmpty ? "You’re all caught up."
-                                           : "No one new in these topics.")
+            Text(app.feedLoading ? "Finding your people…"
+                 : app.exploreTopics.isEmpty ? "You’re all caught up."
+                                             : "No one new in these topics.")
                 .font(.serif(30)).multilineTextAlignment(.center)
-            Text(app.exploreTopics.isEmpty
+            Text(app.feedLoading ? " "
+                 : app.exploreTopics.isEmpty
                  ? "You’ve seen everyone for now. New people join all the time — check back soon."
                  : "Try removing a topic, or come back later as more people join.")
                 .font(.grotesk(14.5)).foregroundStyle(CT.bodyLight)
@@ -139,8 +141,8 @@ private struct ProfileScroll: View {
     var member: Member
     var shared: [String]
 
-    /// A few portrait framings derived from the member's light source, standing
-    /// in for a set of photos.
+    /// A few portrait framings derived from the member's light source — the
+    /// fallback when they haven't uploaded photos.
     private var photoSeeds: [PortraitSeed] {
         let s = member.portrait
         func clamp(_ v: Double) -> Double { min(92, max(8, v)) }
@@ -151,12 +153,15 @@ private struct ProfileScroll: View {
         ]
     }
 
+    /// Real uploaded photos, if any.
+    private var photos: [Data] { app.memberPhotos[member.id] ?? [] }
+
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 16) {
                 nameHeader
 
-                photo(photoSeeds[0])
+                photo(0)
 
                 if !shared.isEmpty { sharedCard }
 
@@ -164,7 +169,7 @@ private struct ProfileScroll: View {
                     promptCard(member.prompts[0])
                 }
 
-                photo(photoSeeds[1])
+                if photos.count > 1 || photos.isEmpty { photo(1) }
 
                 aboutCard
 
@@ -172,7 +177,11 @@ private struct ProfileScroll: View {
                     promptCard(member.prompts[1])
                 }
 
-                photo(photoSeeds[2])
+                if photos.count > 2 || photos.isEmpty { photo(2) }
+
+                if member.prompts.indices.contains(2) {
+                    promptCard(member.prompts[2])
+                }
 
                 interestsCard
             }
@@ -205,14 +214,21 @@ private struct ProfileScroll: View {
 
     // MARK: Photo panel
 
-    private func photo(_ seed: PortraitSeed) -> some View {
-        ZStack {
-            PortraitGradient(lx: seed.lx, ly: seed.ly, mood: app.mood)
-            Grain(opacity: 0.13)
-        }
-        .frame(height: 460)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .shadow(color: .black.opacity(0.18), radius: 18, x: 0, y: 12)
+    private func photo(_ index: Int) -> some View {
+        let seed = photoSeeds[min(index, photoSeeds.count - 1)]
+        return RoundedRectangle(cornerRadius: 22, style: .continuous)
+            .fill(CT.photoEmpty)
+            .frame(height: 460)
+            .overlay {
+                ProfilePhoto(data: index < photos.count ? photos[index] : nil) {
+                    ZStack {
+                        PortraitGradient(lx: seed.lx, ly: seed.ly, mood: app.mood)
+                        Grain(opacity: 0.13)
+                    }
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .shadow(color: .black.opacity(0.18), radius: 18, x: 0, y: 12)
     }
 
     // MARK: Cards
