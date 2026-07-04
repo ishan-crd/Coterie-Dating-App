@@ -2,8 +2,9 @@
 //  LocationPicker.swift
 //  coterie-ios
 //
-//  A map-based location chooser: detect the current location, pan/drag the map
-//  under a fixed pin to place yourself, and reverse-geocode to a city name.
+//  A map-based location chooser, Google-Maps style: search a place (with live
+//  autocomplete results), detect your current location, or pan/drag the map
+//  under a fixed pin. Everything resolves to a city name.
 //
 
 import SwiftUI
@@ -11,13 +12,12 @@ import Combine
 import MapKit
 import CoreLocation
 
-// MARK: - Location manager
+// MARK: - Location manager (current location)
 
 @MainActor
 final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     @Published var authorization: CLAuthorizationStatus
-    /// Called once when a fresh fix arrives (after a request).
     var onFix: ((CLLocationCoordinate2D) -> Void)?
 
     override init() {
@@ -31,12 +31,9 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
 
     func requestLocation() {
         switch manager.authorizationStatus {
-        case .notDetermined:
-            manager.requestWhenInUseAuthorization()
-        case .authorizedWhenInUse, .authorizedAlways:
-            manager.requestLocation()
-        default:
-            break
+        case .notDetermined: manager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse, .authorizedAlways: manager.requestLocation()
+        default: break
         }
     }
 
@@ -56,8 +53,36 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         Task { @MainActor in self.onFix?(coord) }
     }
 
-    nonisolated func locationManager(_ manager: CLLocationManager,
-                                     didFailWithError error: Error) {}
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {}
+}
+
+// MARK: - Search autocomplete
+
+@MainActor
+final class LocationSearch: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
+    private let completer = MKLocalSearchCompleter()
+    @Published var results: [MKLocalSearchCompletion] = []
+
+    override init() {
+        super.init()
+        completer.delegate = self
+        completer.resultTypes = [.address, .pointOfInterest]
+    }
+
+    func update(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { results = []; return }
+        completer.queryFragment = trimmed
+    }
+
+    nonisolated func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        let items = completer.results
+        Task { @MainActor in self.results = items }
+    }
+
+    nonisolated func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
+        Task { @MainActor in self.results = [] }
+    }
 }
 
 // MARK: - Location picker
@@ -66,45 +91,125 @@ struct LocationPicker: View {
     @Binding var city: String
 
     @StateObject private var locationManager = LocationManager()
+    @StateObject private var search = LocationSearch()
+
+    @State private var searchText = ""
+    @FocusState private var searchFocused: Bool
+    @State private var programmaticEdit = false
+
+    private static let defaultCenter = CLLocationCoordinate2D(latitude: 51.5074, longitude: -0.1278)
     @State private var position: MapCameraPosition = .region(
-        MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 51.5074, longitude: -0.1278),
-                           span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5))
-    )
-    @State private var lastGeocoded = CLLocationCoordinate2D(latitude: 51.5074, longitude: -0.1278)
+        MKCoordinateRegion(center: defaultCenter,
+                           span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)))
+    @State private var lastGeocoded = defaultCenter
     @State private var resolving = false
     @State private var locating = false
     @State private var pinLift = false
 
+    private var showResults: Bool { searchFocused && !search.results.isEmpty }
+
     var body: some View {
-        VStack(spacing: 16) {
-            detectButton
+        VStack(spacing: 14) {
+            searchBar
 
-            map
-                .frame(height: 320)
-                .overlay { centerPin }
-                .overlay(alignment: .bottomTrailing) { recenterButton.padding(12) }
-                .overlay(alignment: .bottomLeading) {
-                    if resolving { resolvingBadge.padding(12) }
+            if showResults {
+                resultsList
+            } else {
+                detectButton
+                mapCard
+                if locationManager.denied {
+                    Label("Location is off. Enable it in Settings, or search / drag the map.",
+                          systemImage: "location.slash")
+                        .font(.grotesk(12)).foregroundStyle(CT.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(CT.border, lineWidth: 1))
-                .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 10)
-
-            cityField
-
-            if locationManager.denied {
-                Label("Location is off. Enable it in Settings, or drag the map to choose.",
-                      systemImage: "location.slash")
-                    .font(.grotesk(12)).foregroundStyle(CT.muted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .animation(.easeOut(duration: 0.18), value: showResults)
         .onAppear {
+            setText(city)
             locationManager.onFix = { coord in flyTo(coord) }
         }
     }
 
+    // MARK: Search bar
+
+    private var searchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 15, weight: .medium)).foregroundStyle(CT.muted)
+            TextField("Search a city or place", text: $searchText)
+                .font(.grotesk(16))
+                .tint(CT.accent)
+                .autocorrectionDisabled()
+                .focused($searchFocused)
+                .submitLabel(.search)
+                .onChange(of: searchText) { _, value in
+                    if programmaticEdit { programmaticEdit = false; return }
+                    search.update(value)
+                    city = value
+                }
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""; search.update(""); city = ""; searchFocused = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16)).foregroundStyle(CT.faint)
+                }
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 14)
+        .background(CT.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(CT.border, lineWidth: 1))
+    }
+
+    // MARK: Results list
+
+    private var resultsList: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(search.results.prefix(7).enumerated()), id: \.offset) { index, result in
+                Button { pick(result) } label: {
+                    HStack(spacing: 13) {
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.system(size: 20)).foregroundStyle(CT.accent)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(result.title)
+                                .font(.grotesk(15, weight: .medium)).foregroundStyle(CT.ink)
+                                .lineLimit(1)
+                            if !result.subtitle.isEmpty {
+                                Text(result.subtitle)
+                                    .font(.grotesk(12.5)).foregroundStyle(CT.muted).lineLimit(1)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 13).padding(.horizontal, 15)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                if index < min(search.results.count, 7) - 1 {
+                    Rectangle().fill(CT.hairline).frame(height: 1).padding(.leading, 48)
+                }
+            }
+        }
+        .background(CT.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(CT.border, lineWidth: 1))
+    }
+
     // MARK: Map
+
+    private var mapCard: some View {
+        map
+            .frame(height: 300)
+            .overlay { centerPin }
+            .overlay(alignment: .bottomTrailing) { recenterButton.padding(12) }
+            .overlay(alignment: .bottomLeading) { if resolving { resolvingBadge.padding(12) } }
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(CT.border, lineWidth: 1))
+            .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 10)
+    }
 
     private var map: some View {
         MapReader { proxy in
@@ -127,7 +232,6 @@ struct LocationPicker: View {
         }
     }
 
-    /// Fixed pin at the map's centre; the map moves beneath it.
     private var centerPin: some View {
         VStack(spacing: 2) {
             Image(systemName: "mappin")
@@ -140,7 +244,7 @@ struct LocationPicker: View {
                 .frame(width: pinLift ? 14 : 10, height: 4)
                 .blur(radius: 1)
         }
-        .offset(y: -18)               // lift so the needle tip sits on the centre
+        .offset(y: -18)
         .allowsHitTesting(false)
     }
 
@@ -166,8 +270,6 @@ struct LocationPicker: View {
         .background(.ultraThinMaterial, in: Capsule())
     }
 
-    // MARK: Controls
-
     private var detectButton: some View {
         Button { locate() } label: {
             HStack(spacing: 9) {
@@ -188,29 +290,45 @@ struct LocationPicker: View {
         .buttonStyle(PressableStyle(scale: 0.98))
     }
 
-    private var cityField: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "mappin.and.ellipse").foregroundStyle(CT.muted)
-            UnderlineField(placeholder: "Your city", text: $city, fontSize: 24)
-        }
+    // MARK: Actions
+
+    /// Set the search field programmatically without re-triggering autocomplete.
+    private func setText(_ value: String) {
+        programmaticEdit = true
+        searchText = value
     }
 
-    // MARK: Actions
+    private func pick(_ completion: MKLocalSearchCompletion) {
+        searchFocused = false
+        let request = MKLocalSearch.Request(completion: completion)
+        MKLocalSearch(request: request).start { response, _ in
+            guard let item = response?.mapItems.first else { return }
+            let coord = item.placemark.coordinate
+            let name = item.placemark.locality
+                ?? item.placemark.name
+                ?? completion.title
+            setText(name)
+            city = name
+            search.results = []
+            flyTo(coord)
+        }
+    }
 
     private func locate() {
         locating = true
         locationManager.requestLocation()
-        // Clear the spinner shortly after; the fix (if any) arrives via onFix.
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { locating = false }
     }
 
     private func flyTo(_ coord: CLLocationCoordinate2D) {
         locating = false
+        lastGeocoded = coord
         withAnimation(.easeInOut(duration: 0.6)) {
             position = .region(MKCoordinateRegion(
                 center: coord,
                 span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)))
         }
+        reverseGeocode(coord)
     }
 
     private func reverseGeocode(_ coord: CLLocationCoordinate2D) {
@@ -220,7 +338,10 @@ struct LocationPicker: View {
             resolving = false
             guard let p = placemarks?.first else { return }
             let name = p.locality ?? p.subAdministrativeArea ?? p.administrativeArea ?? p.country
-            if let name, !name.isEmpty { city = name }
+            if let name, !name.isEmpty {
+                setText(name)
+                city = name
+            }
         }
     }
 
