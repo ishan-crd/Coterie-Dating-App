@@ -23,9 +23,9 @@ struct EditProfileView: View {
 
                     label("Birthday").padding(.top, 28)
                     HStack(spacing: 16) {
-                        UnderlineField(placeholder: "DD", text: app.digitBind(\.dobD, 2),
+                        UnderlineField(placeholder: "DD", text: app.clampedDigitBind(\.dobD, digits: 2, max: 31),
                                        fontSize: 24, alignment: .leading, keyboard: .numberPad)
-                        UnderlineField(placeholder: "MM", text: app.digitBind(\.dobM, 2),
+                        UnderlineField(placeholder: "MM", text: app.clampedDigitBind(\.dobM, digits: 2, max: 12),
                                        fontSize: 24, alignment: .leading, keyboard: .numberPad)
                         UnderlineField(placeholder: "YYYY", text: app.digitBind(\.dobY, 4),
                                        fontSize: 24, alignment: .leading, keyboard: .numberPad)

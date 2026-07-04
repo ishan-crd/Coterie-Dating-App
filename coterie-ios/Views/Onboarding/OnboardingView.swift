@@ -165,14 +165,35 @@ private struct BirthdayStep: View {
             StepHeading(title: "When’s your birthday?",
                         subtitle: "We show your age, never your date of birth.")
             HStack(alignment: .bottom, spacing: 16) {
-                dobField("Day", "DD", app.digitBind(\.dobD, 2))
-                dobField("Month", "MM", app.digitBind(\.dobM, 2))
+                dobField("Day", "DD", app.clampedDigitBind(\.dobD, digits: 2, max: 31))
+                dobField("Month", "MM", app.clampedDigitBind(\.dobM, digits: 2, max: 12))
                 dobField("Year", "YYYY", app.digitBind(\.dobY, 4), wide: true)
             }
             .padding(.top, 36)
-            Text(app.profile.age.map { "You’ll appear as \($0)" } ?? " ")
+
+            feedback
+                .padding(.top, 24)
+                .frame(height: 22)
+                .animation(.easeOut(duration: 0.2), value: app.profile.birthdayIssue)
+                .animation(.easeOut(duration: 0.2), value: app.profile.age)
+        }
+    }
+
+    @ViewBuilder private var feedback: some View {
+        if let issue = app.profile.birthdayIssue {
+            HStack(spacing: 7) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                Text(issue).font(.grotesk(14, weight: .medium))
+            }
+            .foregroundStyle(CT.accent)
+            .transition(.opacity)
+        } else if app.profile.isValidBirthday, let age = app.profile.age {
+            Text("You’ll appear as \(age)")
                 .serifItalic(17).foregroundStyle(CT.muted)
-                .padding(.top, 24).frame(height: 22)
+                .transition(.opacity)
+        } else {
+            Text(" ").serifItalic(17)
         }
     }
 

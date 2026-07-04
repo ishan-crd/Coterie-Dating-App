@@ -413,7 +413,7 @@ final class AppState: ObservableObject {
         switch step {
         case .welcome, .review: return true
         case .name:      return profile.name.trimmingCharacters(in: .whitespaces).count >= 2
-        case .birthday:  return !profile.dobM.isEmpty && !profile.dobD.isEmpty && profile.dobY.count == 4
+        case .birthday:  return profile.isValidBirthday
         case .photos:    return profile.filledPhotoCount >= 2
         case .about:     return !profile.pronouns.isEmpty && !profile.seeking.isEmpty
         case .city:      return !profile.city.trimmingCharacters(in: .whitespaces).isEmpty
@@ -801,5 +801,17 @@ extension AppState {
     func digitBind(_ keyPath: WritableKeyPath<UserProfile, String>, _ limit: Int) -> Binding<String> {
         Binding(get: { self.profile[keyPath: keyPath] },
                 set: { self.profile[keyPath: keyPath] = String($0.filter(\.isNumber).prefix(limit)) })
+    }
+
+    /// A digit binding capped at `digits` characters and a numeric ceiling
+    /// (e.g. day ≤ 31, month ≤ 12). Leading zeros are preserved while typing.
+    func clampedDigitBind(_ keyPath: WritableKeyPath<UserProfile, String>,
+                          digits: Int, max: Int) -> Binding<String> {
+        Binding(get: { self.profile[keyPath: keyPath] },
+                set: { raw in
+                    var s = String(raw.filter(\.isNumber).prefix(digits))
+                    if let v = Int(s), v > max { s = String(max) }
+                    self.profile[keyPath: keyPath] = s
+                })
     }
 }

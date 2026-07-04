@@ -75,15 +75,44 @@ struct UserProfile: Codable, Equatable {
     var prompts: [PromptResponse] = []
     var interests: [String] = []
 
-    /// Age derived from the full date of birth, relative to today.
-    var age: Int? {
-        guard dobY.count == 4, let y = Int(dobY) else { return nil }
-        let m = Int(dobM) ?? 1
-        let d = Int(dobD) ?? 1
+    /// Minimum / maximum ages the app accepts.
+    static let minAge = 13
+    static let maxAge = 120
+
+    /// The birthday as a real Date, only if every field is a genuine calendar
+    /// date that isn't in the future (rejects e.g. 31/02, month 13, future years).
+    var birthDate: Date? {
+        guard dobY.count == 4, let y = Int(dobY),
+              let m = Int(dobM), let d = Int(dobD),
+              (1...12).contains(m), (1...31).contains(d) else { return nil }
         var c = DateComponents(); c.year = y; c.month = m; c.day = d
         let cal = Calendar.current
         guard let birth = cal.date(from: c) else { return nil }
-        return cal.dateComponents([.year], from: birth, to: Date()).year
+        // Reject rolled-over dates (Feb 30 → Mar 2) by round-tripping.
+        let back = cal.dateComponents([.year, .month, .day], from: birth)
+        guard back.year == y, back.month == m, back.day == d, birth <= Date() else { return nil }
+        return birth
+    }
+
+    /// Age derived from the full date of birth, relative to today.
+    var age: Int? {
+        guard let birth = birthDate else { return nil }
+        return Calendar.current.dateComponents([.year], from: birth, to: Date()).year
+    }
+
+    var isValidBirthday: Bool {
+        guard let a = age else { return false }
+        return a >= Self.minAge && a <= Self.maxAge
+    }
+
+    /// A user-facing problem with the birthday, or nil while it's still being
+    /// entered or already valid. Only speaks up once all fields are filled.
+    var birthdayIssue: String? {
+        guard dobY.count == 4, !dobM.isEmpty, !dobD.isEmpty else { return nil }
+        guard let a = age else { return "That date doesn’t look right." }
+        if a < Self.minAge { return "You must be at least \(Self.minAge)." }
+        if a > Self.maxAge { return "Please check the year you entered." }
+        return nil
     }
 
     var filledPhotoCount: Int { photos.compactMap { $0 }.count }
