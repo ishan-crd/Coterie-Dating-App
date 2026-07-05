@@ -8,13 +8,13 @@ contract are in **`HANDOFF.md`** — read it before substantial work.
 
 ```bash
 # Build (source of truth for correctness)
-xcodebuild -project coterie-ios.xcodeproj -scheme coterie-ios \
+xcodebuild -project Circle.xcodeproj -scheme Circle \
   -destination 'platform=iOS Simulator,name=iPhone 17' \
-  -derivedDataPath /tmp/coterie-dd build
+  -derivedDataPath /tmp/circle-dd build
 
 # Launch a preview state on the booted simulator (DEBUG launch args)
-xcrun simctl install booted /tmp/coterie-dd/Build/Products/Debug-iphonesimulator/coterie-ios.app
-xcrun simctl launch booted com.datecotorie.app -previewApp -previewTab today
+xcrun simctl install booted /tmp/circle-dd/Build/Products/Debug-iphonesimulator/Circle.app
+xcrun simctl launch booted com.circlein.app -previewApp -previewTab today
 # extra args: -previewDark | -previewOnboarding -previewStep N | -previewTab gallery|invites|messages|profile
 ```
 
@@ -42,8 +42,8 @@ If "iPhone 17" isn't available, list devices with `xcrun simctl list devices ava
   Apple capability (entitlements file exists); Google needs an iOS OAuth client
   configured in the dashboard; phone OTP needs an SMS provider (e.g. Twilio).
 - **Theme defaults to System** (follows the device); user can override to Light/Dark.
-- **Bundle id** `com.datecotorie.app`; **display name** `Circle`. The Xcode target/
-  folder is still named `coterie-ios` (cosmetic legacy).
+- **Bundle id** `com.circlein.app`; **display name** `Circle`. The Xcode
+  project, target, and source folder are all named `Circle`.
 - **User photos are real uploads** — `PhotosPicker` → `AppState.setPhoto` (downscaled JPEG `Data` in `UserProfile.photos`, persisted in `UserDefaults`); rendered via `ProfilePhoto`. Only **other people's** photos (`Member.portrait`) are still `PortraitGradient` placeholders.
 - Keep `CTData.interests` and `CTData.prompts` in sync with any backend vocabulary,
   or matching/filtering breaks silently.

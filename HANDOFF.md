@@ -12,7 +12,7 @@
 
 ## 1. Product summary
 
-- **Name:** Circle (display name `Circle`; the Xcode target is still `coterie-ios` — see §11 for the rename caveats).
+- **Name:** Circle (display name `Circle`; the Xcode project, target, and folder are all `Circle`).
 - **Tagline:** "Find friends who share your world."
 - **Core loop:** A user onboards (builds a profile of name, age, photos, city, work, prompts, interests), then on the **Explore / Today** page sees other people one at a time as a full scrolling profile. They **pass (✕)** or **like (♥)**. Likes are capped at **5 per day**. Liking someone starts a conversation that appears in **Messages**.
 - **Entry gate:** Real auth via `AuthView` — Sign in with Apple (native), Google (OAuth) and phone OTP through Supabase Auth. No invite gate.
@@ -32,14 +32,14 @@
 - **Dependencies:** one SPM package — **supabase-swift** (declared directly in `project.pbxproj`).
 - **State:** A single `@MainActor` `ObservableObject` `AppState` injected via `.environmentObject`. All screens read it with `@EnvironmentObject`. All networking goes through `Store/SupabaseService.swift`.
 - **Persistence:** server-owned data on Supabase; `UserDefaults` (via `Persistence`) keeps only local preferences (+ a local profile cache).
-- **Xcode project:** `coterie-ios.xcodeproj`. Uses **synchronized folder groups** (objectVersion 77 / `PBXFileSystemSynchronizedRootGroup`) — **any file added to a folder is automatically included in the target**; you do not edit `project.pbxproj` to add files.
-- **Bundle id:** `com.datecotorie.app` (main), `com.datecotorie.app.Tests`, `com.datecotorie.app.UITests`.
+- **Xcode project:** `Circle.xcodeproj`. Uses **synchronized folder groups** (objectVersion 77 / `PBXFileSystemSynchronizedRootGroup`) — **any file added to a folder is automatically included in the target**; you do not edit `project.pbxproj` to add files.
+- **Bundle id:** `com.circlein.app` (main), `com.circlein.app.Tests`, `com.circlein.app.UITests`.
 - **Display name:** `Circle` (set via `INFOPLIST_KEY_CFBundleDisplayName` in build settings; `GENERATE_INFOPLIST_FILE = YES`, so there is no standalone Info.plist).
 
 ### File tree
 ```
-coterie-ios/
-  coterie_iosApp.swift          // @main entry; creates AppState, shows RootView
+Circle/
+  CircleApp.swift          // @main entry; creates AppState, shows RootView
   Models/Models.swift           // Domain models + CTData seed data
   Store/
     AppState.swift              // Single source of truth (nav, session, explore, chat)
@@ -64,7 +64,7 @@ coterie-ios/
       ChatView.swift            // 1:1 conversation with simulated replies
   Assets.xcassets/
     AppIcon.appiconset          // 1024px app icon (currently old "Coterie" art — NEEDS new Circle icon)
-    coterie-logo.imageset       // Old wordmark PNG — NO LONGER USED (LogoMark renders serif text now)
+    circle-logo.imageset       // Old wordmark PNG — NO LONGER USED (LogoMark renders serif text now)
     AccentColor.colorset
 HANDOFF.md                      // this file
 ```
@@ -249,9 +249,9 @@ Six fixed `PortraitSeed`s — **now legacy/unused** (the user uploads real photo
 ## 7. Persistence today vs. backend target (`Store/Persistence.swift`)
 
 Currently everything is local `UserDefaults` JSON:
-- `StoredSettings { notifications, paused, appearance }` → key `coterie.settings`
-- `UserProfile` → key `coterie.profile`
-- `StoredLikes { day, remaining }` → key `coterie.likes`
+- `StoredSettings { notifications, paused, appearance }` → key `circle.settings`
+- `UserProfile` → key `circle.profile`
+- `StoredLikes { day, remaining }` → key `circle.likes`
 - `Persistence.clear()` wipes the profile on logout (settings preserved).
 
 **Backend migration plan:**
@@ -363,24 +363,24 @@ The app began as an **invite-only dating app ("Coterie")** and was pivoted to a 
 1. **`UserProfile.seeking` + `CTData.seeking` (`Women/Men/Everyone`) and the onboarding "Interested in meeting" step** — dating-oriented. Decide whether to drop or repurpose (e.g. "who you want to meet").
 2. **`ProfileDetailView` footer "Introduce Yourself"** CTA + the `Member.why` ("why you were introduced") field — dating-era copy. Consider "Say Hi" / "Add Friend".
 3. **Invite-only gate** (`111111`) — likely becomes open signup with real auth.
-4. **App icon (`AppIcon.appiconset`) still shows the old "Coterie" art**, and `coterie-logo.imageset` is now **unused** (LogoMark is serif text). Provide a new **Circle** icon (single opaque 1024px, no alpha) and drop or replace the imageset.
-5. **Xcode target/folder is still named `coterie-ios`** and bundle id is `com.datecotorie.app` (contains "cotorie"). Renaming the target is optional/cosmetic; the user-facing display name is already `Circle`.
+4. **App icon (`AppIcon.appiconset`) still shows the old "Coterie" art**, and `circle-logo.imageset` is now **unused** (LogoMark is serif text). Provide a new **Circle** icon (single opaque 1024px, no alpha) and drop or replace the imageset.
+5. **Bundle id is `com.circlein.app`.** The Xcode project, target, and source folder are all named `Circle`; the module name is `Circle`.
 6. Copy throughout still leans editorial/curated ("The Gallery", "Curated for you", "Introduced by Circle" → already partly updated). Audit for friend-tone.
 
 ---
 
 ## 12. Build / run / test
 
-- **Open:** `coterie-ios.xcodeproj` in Xcode (iOS 26 SDK).
+- **Open:** `Circle.xcodeproj` in Xcode (iOS 26 SDK).
 - **Build (CLI):**
   ```
-  xcodebuild -project coterie-ios.xcodeproj -scheme coterie-ios \
+  xcodebuild -project Circle.xcodeproj -scheme Circle \
     -destination 'platform=iOS Simulator,name=iPhone 17' \
-    -derivedDataPath /tmp/coterie-dd build
+    -derivedDataPath /tmp/circle-dd build
   ```
 - **Run a preview state on the simulator** (DEBUG launch args), e.g. land on Explore:
   ```
-  xcrun simctl launch booted com.datecotorie.app -previewApp -previewTab today
+  xcrun simctl launch booted com.circlein.app -previewApp -previewTab today
   ```
   Add `-previewDark` to force dark, or `-previewOnboarding -previewStep N`.
 - **Source of truth for correctness is `xcodebuild`.** SourceKit/IDE may show false "Cannot find type 'X' in scope" cross-file errors that are not real — trust a clean `xcodebuild`.
