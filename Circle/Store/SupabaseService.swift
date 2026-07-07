@@ -164,6 +164,27 @@ enum SupabaseService {
         try await client.rpc("reactivate_account").execute()
     }
 
+    // MARK: Push tokens
+
+    struct DeviceTokenRow: Encodable {
+        let token: String
+        let user_id: UUID
+        let platform: String
+    }
+
+    /// Register (or refresh) this device's APNs token for the signed-in user.
+    static func registerDeviceToken(_ token: String) async throws {
+        guard let uid = userID else { return }
+        try await client.from("device_tokens")
+            .upsert(DeviceTokenRow(token: token, user_id: uid, platform: "ios"),
+                    onConflict: "token")
+            .execute()
+    }
+
+    static func removeDeviceToken(_ token: String) async {
+        try? await client.from("device_tokens").delete().eq("token", value: token).execute()
+    }
+
     /// Remove every uploaded photo of the current user from the storage bucket.
     static func deleteAllOwnPhotos() async throws {
         guard let uid = userID else { return }

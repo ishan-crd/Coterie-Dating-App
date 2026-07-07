@@ -278,6 +278,15 @@ Email sign-in uses `signInWithOTP(email:, shouldCreateUser: true)` → `verifyOT
 - **Raise the email rate limit** (Auth → Rate Limits) off the 2/hour default — that cap protected Supabase's shared email, which the Resend hook no longer uses.
 - Frontend auth errors are funneled through `AppState.friendlyAuthError(_:)`, which maps everything to short human messages (and stays silent on user cancellation) — raw error codes/domains never reach the UI.
 
+#### Push notifications (APNs via Resend-style hook)
+Match + new-message pushes. Wired but **dormant until Apple setup is done**:
+- **Client:** `CircleApp.AppDelegate` captures the APNs token → `AppState.registerPushToken` → `device_tokens` table (`registerDeviceToken`). Permission is requested when the user reaches the app / toggles "New introductions" on (`syncPushRegistration`). Token is removed on logout.
+- **DB:** `device_tokens (token pk, user_id, platform, updated_at)` with own-row RLS.
+- **Edge function `push-notify`** (`supabase/functions/push-notify/index.ts`, `verify_jwt=false`): invoked by **Database Webhooks** on INSERT into `messages` and `matches`; resolves recipient(s), looks up their tokens, sends APNs with an ES256-signed auth token. Authenticated by an `x-webhook-secret` header.
+- **Apple setup required (user):** in Xcode add the **Push Notifications** capability (adds `aps-environment`); in the Apple Developer portal create an **APNs Auth Key (.p8)** and note its Key ID + your Team ID.
+- **Edge-function secrets:** `PUSH_WEBHOOK_SECRET`, `APNS_KEY_P8` (the .p8 contents), `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID=com.circlein.app`, `APNS_ENV` (`sandbox` for dev/TestFlight, `production` for App Store).
+- **Webhooks (dashboard):** Database → Webhooks → two INSERT webhooks (on `messages`, on `matches`) → HTTP POST to `…/functions/v1/push-notify` with header `x-webhook-secret: <PUSH_WEBHOOK_SECRET>`.
+
 ### Tables (schema `public`, all with RLS)
 | Table | Purpose | Key columns / rules |
 |---|---|---|

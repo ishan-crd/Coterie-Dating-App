@@ -10,6 +10,7 @@
 import SwiftUI
 import Combine
 import UIKit
+import UserNotifications
 import AuthenticationServices
 import Supabase
 
@@ -62,7 +63,9 @@ final class AppState: ObservableObject {
     @Published var activeSheet: ActiveSheet?
 
     // MARK: Preferences (persisted locally)
-    @Published var notifications = true { didSet { persistSettings() } }
+    @Published var notifications = true {
+        didSet { persistSettings(); if notifications && !oldValue { syncPushRegistration() } }
+    }
     @Published var paused = false { didSet { persistSettings() } }
     @Published var appearance: AppearanceMode = .system { didSet { persistSettings() } }
     let mood: PortraitMood = .studio
@@ -76,6 +79,7 @@ final class AppState: ObservableObject {
 
     init() {
         loadSettings()
+        AppDelegate.appState = self
         #if DEBUG
         if applyPreviewLaunchArguments() { isPreview = true; return }
         #endif
@@ -230,6 +234,8 @@ final class AppState: ObservableObject {
                 await loadOwnExtras()
                 withAnimation(.easeOut(duration: 0.5)) { stage = .app; tab = .today }
                 await loadSignedInData()
+                uploadPendingPushToken()
+                syncPushRegistration()
             } else {
                 if let row { apply(row) }
                 onboardingStep = 0
@@ -519,6 +525,8 @@ final class AppState: ObservableObject {
         Task {
             await pushProfile(markComplete: true)
             await loadSignedInData()
+            uploadPendingPushToken()
+            syncPushRegistration()
         }
     }
 
@@ -758,7 +766,11 @@ final class AppState: ObservableObject {
     func logout() {
         realtimeTask?.cancel()
         realtimeTask = nil
-        Task { await SupabaseService.signOut() }
+        let token = pendingPushToken
+        Task {
+            if let token { await SupabaseService.removeDeviceToken(token) }
+            await SupabaseService.signOut()
+        }
         Persistence.clear()
         profile = UserProfile()
         onboardingStep = 0
@@ -777,7 +789,33 @@ final class AppState: ObservableObject {
         withAnimation(.easeOut(duration: 0.4)) { stage = .auth }
     }
 
-    // MARK: - Preferences persistence (local only)
+    // MARK: - Push notifications
+
+    /// The most recent APNs token, held until the user is authenticated so it
+    /// can be uploaded once we know their id.
+    private var pendingPushToken: String?
+
+    /// Ask for permission (only if notifications are enabled) and register with
+    /// APNs. The token arrives asynchronously via the app delegate.
+    func syncPushRegistration() {
+        guard notifications, !isPreview else { return }
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let granted = (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+            if granted { UIApplication.shared.registerForRemoteNotifications() }
+        }
+    }
+
+    /// Called by the app delegate with the device's APNs token (hex string).
+    func registerPushToken(_ token: String) {
+        pendingPushToken = token
+        uploadPendingPushToken()
+    }
+
+    private func uploadPendingPushToken() {
+        guard !isPreview, let token = pendingPushToken, SupabaseService.userID != nil else { return }
+        Task { try? await SupabaseService.registerDeviceToken(token) }
+    }
 
     private func persistSettings() {
         Persistence.saveSettings(.init(notifications: notifications, paused: paused,
