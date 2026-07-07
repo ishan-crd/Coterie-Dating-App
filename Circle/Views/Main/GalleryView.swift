@@ -76,6 +76,7 @@ private struct GalleryCard: View {
             }
             .padding(24)
         }
+        .frame(maxWidth: .infinity)
         .frame(height: 434)
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .shadow(color: .black.opacity(0.4), radius: 25, x: 0, y: 20)

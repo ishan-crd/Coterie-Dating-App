@@ -2,13 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!--
-	  Google Sign-In needs the app's REVERSED iOS client ID registered as a URL
-	  scheme. Replace YOUR_REVERSED_CLIENT_ID below with the value Google Cloud
-	  Console shows for your iOS OAuth client (it looks like
-	  com.googleusercontent.apps.1234567890-abcdef). This is just your client ID
-	  with the two halves swapped.
-	-->
+	<!-- CFBundleURLTypes below registers the reversed Google iOS client ID as a
+	     URL scheme, required by GoogleSignIn to receive the OAuth callback. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSLocationWhenInUseUsageDescription</key>

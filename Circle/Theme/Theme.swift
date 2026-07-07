@@ -217,13 +217,26 @@ struct LogoMark: View {
 
 // MARK: - Profile photo
 
+/// Caches decoded `UIImage`s keyed by their JPEG `Data`, so a photo isn't
+/// re-decoded on every SwiftUI body pass (which caused scroll hitches in lists).
+enum DecodedImageCache {
+    private static let cache = NSCache<NSData, UIImage>()
+    static func image(for data: Data) -> UIImage? {
+        let key = data as NSData
+        if let cached = cache.object(forKey: key) { return cached }
+        guard let image = UIImage(data: data) else { return nil }
+        cache.setObject(image, forKey: key)
+        return image
+    }
+}
+
 /// Renders an uploaded profile photo (JPEG `Data`), or a placeholder when empty.
 struct ProfilePhoto<Placeholder: View>: View {
     var data: Data?
     @ViewBuilder var placeholder: () -> Placeholder
 
     var body: some View {
-        if let data, let image = UIImage(data: data) {
+        if let data, let image = DecodedImageCache.image(for: data) {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()

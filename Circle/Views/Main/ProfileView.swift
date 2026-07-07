@@ -72,6 +72,7 @@ struct ProfileView: View {
             }
             .padding(24)
         }
+        .frame(maxWidth: .infinity)
         .frame(height: 330)
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .shadow(color: .black.opacity(0.4), radius: 28, x: 0, y: 22)

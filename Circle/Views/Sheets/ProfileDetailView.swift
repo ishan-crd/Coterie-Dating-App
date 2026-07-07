@@ -53,6 +53,7 @@ struct ProfileDetailView: View {
             }
             .padding(26)
         }
+        .frame(maxWidth: .infinity)
         .frame(height: 486)
         .clipped()
         .overlay(alignment: .topLeading) {
