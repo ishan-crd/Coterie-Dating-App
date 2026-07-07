@@ -128,12 +128,12 @@ final class AppState: ObservableObject {
         }
     }
 
-    func sendPhoneCode(phone: String, onSent: @escaping () -> Void) {
+    func sendEmailCode(email: String, onSent: @escaping () -> Void) {
         authError = nil
         authBusy = true
         Task {
             do {
-                try await SupabaseService.sendPhoneOTP(phone)
+                try await SupabaseService.sendEmailOTP(email)
                 authBusy = false
                 onSent()
             } catch {
@@ -143,12 +143,12 @@ final class AppState: ObservableObject {
         }
     }
 
-    func verifyPhoneCode(phone: String, code: String, onDone: @escaping () -> Void) {
+    func verifyEmailCode(email: String, code: String, onDone: @escaping () -> Void) {
         authError = nil
         authBusy = true
         Task {
             do {
-                try await SupabaseService.verifyPhoneOTP(phone, code: code)
+                try await SupabaseService.verifyEmailOTP(email, code: code)
                 authBusy = false
                 onDone()
                 await enterSignedIn()

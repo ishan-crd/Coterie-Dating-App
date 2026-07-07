@@ -2,7 +2,7 @@
 //  AuthView.swift
 //  Circle
 //
-//  The doorway to Circle: sign in with Apple, Google or phone. A quiet,
+//  The doorway to Circle: sign in with Apple, Google or email. A quiet,
 //  editorial welcome — pulsing rings, drifting interest chips, serif wordmark.
 //
 
@@ -14,7 +14,7 @@ import CryptoKit
 struct AuthView: View {
     @EnvironmentObject var app: AppState
     @State private var appeared = false
-    @State private var showPhoneSheet = false
+    @State private var showEmailSheet = false
     @State private var appleCoordinator = AppleSignInCoordinator()
 
     var body: some View {
@@ -64,12 +64,12 @@ struct AuthView: View {
                     } action: {
                         app.signInWithGoogle()
                     }
-                    providerButton(label: "Continue with Phone") {
-                        Image(systemName: "phone.fill")
-                            .font(.system(size: 16, weight: .medium))
+                    providerButton(label: "Continue with Email") {
+                        Image(systemName: "envelope.fill")
+                            .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(CT.ink)
                     } action: {
-                        showPhoneSheet = true
+                        showEmailSheet = true
                     }
                 }
                 .padding(.horizontal, 30)
@@ -103,7 +103,7 @@ struct AuthView: View {
             }
         }
         .onAppear { appeared = true }
-        .sheet(isPresented: $showPhoneSheet) { PhoneAuthSheet() }
+        .sheet(isPresented: $showEmailSheet) { EmailAuthSheet() }
         .animation(.easeOut(duration: 0.25), value: app.authBusy)
         .animation(.easeOut(duration: 0.25), value: app.authError)
     }
@@ -197,12 +197,12 @@ private struct FloatingChip: View {
     }
 }
 
-// MARK: - Phone auth sheet (number → code)
+// MARK: - Email auth sheet (email → code)
 
-private struct PhoneAuthSheet: View {
+private struct EmailAuthSheet: View {
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
-    @State private var phone = "+91 "
+    @State private var email = ""
     @State private var code = ""
     @State private var codeSent = false
     @FocusState private var focused: Bool
@@ -210,7 +210,7 @@ private struct PhoneAuthSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(codeSent ? "Enter the code" : "Your phone number")
+                Text(codeSent ? "Enter the code" : "Your email")
                     .font(.serif(30))
                 Spacer()
                 Button { dismiss() } label: {
@@ -222,8 +222,8 @@ private struct PhoneAuthSheet: View {
             .padding(.top, 28)
 
             Text(codeSent
-                 ? "We texted a 6-digit code to \(phone)."
-                 : "We’ll text a 6-digit code to verify this number.")
+                 ? "We emailed a 6-digit code to \(cleanedEmail)."
+                 : "We’ll email you a 6-digit code to sign in.")
                 .font(.grotesk(14)).foregroundStyle(CT.bodyLight).lineSpacing(3)
                 .padding(.top, 10)
 
@@ -236,8 +236,9 @@ private struct PhoneAuthSheet: View {
                         code = String(v.filter(\.isNumber).prefix(6))
                     }
             } else {
-                UnderlineField(placeholder: "+91 98765 43210", text: $phone,
-                               fontSize: 26, alignment: .leading, keyboard: .phonePad)
+                UnderlineField(placeholder: "you@example.com", text: $email,
+                               fontSize: 26, alignment: .leading, keyboard: .emailAddress)
+                    .textInputAutocapitalization(.never)
                     .focused($focused)
                     .padding(.top, 30)
             }
@@ -251,11 +252,11 @@ private struct PhoneAuthSheet: View {
 
             PillButton(title: codeSent ? "Verify" : "Send Code",
                        style: .filled,
-                       enabled: codeSent ? code.count == 6 : phone.count >= 8) {
+                       enabled: codeSent ? code.count == 6 : isValidEmail) {
                 if codeSent {
-                    app.verifyPhoneCode(phone: cleanedPhone, code: code) { dismiss() }
+                    app.verifyEmailCode(email: cleanedEmail, code: code) { dismiss() }
                 } else {
-                    app.sendPhoneCode(phone: cleanedPhone) { codeSent = true }
+                    app.sendEmailCode(email: cleanedEmail) { codeSent = true }
                 }
             }
             .padding(.bottom, 20)
@@ -264,7 +265,7 @@ private struct PhoneAuthSheet: View {
                 Button {
                     codeSent = false; code = ""
                 } label: {
-                    Text("Use a different number")
+                    Text("Use a different email")
                         .font(.grotesk(13)).foregroundStyle(CT.muted)
                         .frame(maxWidth: .infinity)
                 }
@@ -278,8 +279,16 @@ private struct PhoneAuthSheet: View {
         .onAppear { focused = true }
     }
 
-    private var cleanedPhone: String {
-        "+" + phone.filter(\.isNumber)
+    private var cleanedEmail: String {
+        email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    /// Minimal shape check: something@something.tld
+    private var isValidEmail: Bool {
+        let e = cleanedEmail
+        guard let at = e.firstIndex(of: "@"), at != e.startIndex else { return false }
+        let domain = e[e.index(after: at)...]
+        return domain.contains(".") && !domain.hasSuffix(".") && !domain.hasPrefix(".")
     }
 }
 

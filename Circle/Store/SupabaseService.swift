@@ -133,12 +133,13 @@ enum SupabaseService {
         )
     }
 
-    static func sendPhoneOTP(_ phone: String) async throws {
-        try await auth.signInWithOTP(phone: phone)
+    static func sendEmailOTP(_ email: String) async throws {
+        // shouldCreateUser: true → signs up new users on first code.
+        try await auth.signInWithOTP(email: email, shouldCreateUser: true)
     }
 
-    static func verifyPhoneOTP(_ phone: String, code: String) async throws {
-        try await auth.verifyOTP(phone: phone, token: code, type: .sms)
+    static func verifyEmailOTP(_ email: String, code: String) async throws {
+        try await auth.verifyOTP(email: email, token: code, type: .email)
     }
 
     static func signOut() async {
