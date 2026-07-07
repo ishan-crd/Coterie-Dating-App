@@ -399,7 +399,15 @@ final class AppState: ObservableObject {
                 _ = await materialize(rowID: p.id, name: p.name, birthdate: p.birthdate,
                                       city: p.city, work: p.work, bio: p.bio)
             }
-            invites.append(Invitation(id: id, note: "Wants to be friends.", time: ""))
+            // A note grounded in what you actually have in common.
+            let shared = knownMembers[id].map { sharedInterests($0) } ?? []
+            let note: String
+            switch shared.count {
+            case 0:  note = "Liked your profile."
+            case 1:  note = "You both like \(shared[0])."
+            default: note = "You both like \(shared.prefix(2).joined(separator: " & "))."
+            }
+            invites.append(Invitation(id: id, note: note, time: ""))
         }
         invitations = invites
     }
