@@ -393,7 +393,7 @@ final class AppState: ObservableObject {
     }
 
     func member(_ id: String) -> Member? {
-        knownMembers[id] ?? CTData.member(id)
+        knownMembers[id]
     }
 
     func refreshLikers() async {

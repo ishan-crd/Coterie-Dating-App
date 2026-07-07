@@ -20,6 +20,8 @@ struct ProfileView: View {
                 PillButton(title: "Edit Profile", style: .outline) { app.activeSheet = .edit }
                     .padding(.top, 16)
 
+                if !p.bio.isEmpty { aboutSection }
+
                 ForEach(p.prompts.filter { !$0.answer.isEmpty }) { resp in
                     promptSection(app.promptQuestion(resp.promptId) ?? "", resp.answer)
                 }
@@ -85,7 +87,7 @@ struct ProfileView: View {
             VStack(alignment: .leading, spacing: 9) {
                 Text((p.name.isEmpty ? "Your profile" : p.name) + (p.age.map { ", \($0)" } ?? ""))
                     .font(.serif(40)).foregroundStyle(.white)
-                Text((p.work.isEmpty ? "Add your details" : p.work) + (p.city.isEmpty ? "" : " · \(p.city)"))
+                Text(metaLine)
                     .font(.grotesk(10.5, weight: .regular)).tracking(2.0).textCase(.uppercase)
                     .foregroundStyle(.white.opacity(0.82))
             }
@@ -95,6 +97,21 @@ struct ProfileView: View {
         .frame(height: 330)
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .shadow(color: .black.opacity(0.4), radius: 28, x: 0, y: 22)
+    }
+
+    /// Work · City · Pronouns — whichever the user has filled in.
+    private var metaLine: String {
+        let parts = [p.work, p.city, p.pronouns].filter { !$0.isEmpty }
+        return parts.isEmpty ? "Add your details" : parts.joined(separator: " · ")
+    }
+
+    private var aboutSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("About").eyebrow(CT.muted, tracking: 2.6)
+            Text(p.bio).font(.serif(21)).foregroundStyle(CT.ink90).lineSpacing(4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 30)
     }
 
     // MARK: Content sections
