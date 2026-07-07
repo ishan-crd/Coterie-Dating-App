@@ -193,6 +193,10 @@ final class AppState: ObservableObject {
         if has("invalid", "incorrect", "expired", "token has expired", "otp") {
             return "That code is invalid or has expired. Request a new one."
         }
+        // Per-email resend cooldown ("...you can only request this after N seconds").
+        if has("security purposes", "only request", "seconds") {
+            return "Please wait a moment before requesting another code."
+        }
         // Too many requests.
         if has("rate limit", "too many", "429") {
             return "Too many attempts. Please wait a moment and try again."
