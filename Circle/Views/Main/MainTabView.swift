@@ -29,6 +29,12 @@ struct MainTabView: View {
 
             GlassTabBar()
 
+            if let liking = app.pendingLike {
+                LikeComposer(member: liking)
+                    .transition(.opacity)
+                    .zIndex(9)
+            }
+
             if let matched = app.matchedMember {
                 MatchMoment(member: matched)
                     .transition(.opacity)

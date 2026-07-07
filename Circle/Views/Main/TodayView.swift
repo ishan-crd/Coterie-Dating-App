@@ -22,10 +22,10 @@ struct TodayView: View {
                 ZStack(alignment: .bottom) {
                     ProfileScroll(member: candidate, shared: app.sharedInterests(candidate))
                         .id(candidate.id)
-                        .transition(.opacity)
+                        .transition(.swipeAway)
                     floatingActions(for: candidate)
                 }
-                .animation(.easeOut(duration: 0.3), value: candidate.id)
+                .animation(.easeInOut(duration: 0.4), value: candidate.id)
             } else {
                 Spacer()
                 emptyState
@@ -84,7 +84,7 @@ struct TodayView: View {
 
             Spacer()
 
-            Button { app.likeMember(member.id) } label: {
+            Button { app.beginLike(member.id) } label: {
                 actionCircle(system: "heart.fill", filled: true)
             }
             .buttonStyle(PressableStyle(scale: 0.9))
@@ -290,5 +290,29 @@ private struct ProfileScroll: View {
         .background(CT.surface)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(CT.border, lineWidth: 1))
+    }
+}
+
+// MARK: - Pass / advance transition
+
+/// Slides and tips the outgoing profile away while the next one fades in — a
+/// clear "you've moved on to the next person" motion.
+private struct SwipeAwayModifier: ViewModifier {
+    var progress: Double   // 0 = in place, 1 = gone
+    func body(content: Content) -> some View {
+        content
+            .rotationEffect(.degrees(-15 * progress), anchor: .bottomTrailing)
+            .offset(x: -640 * progress, y: 44 * progress)
+            .opacity(1 - progress)
+    }
+}
+
+extension AnyTransition {
+    static var swipeAway: AnyTransition {
+        .asymmetric(
+            insertion: .opacity,
+            removal: .modifier(active: SwipeAwayModifier(progress: 1),
+                               identity: SwipeAwayModifier(progress: 0))
+        )
     }
 }

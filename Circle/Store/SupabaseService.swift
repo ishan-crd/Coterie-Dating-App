@@ -313,11 +313,12 @@ enum SupabaseService {
     struct ActParams: Encodable {
         let p_target: UUID
         let p_action: String
+        let p_note: String?
     }
 
-    static func actOnProfile(_ target: UUID, action: String) async throws -> ActResult {
+    static func actOnProfile(_ target: UUID, action: String, note: String? = nil) async throws -> ActResult {
         try await client.rpc("act_on_profile",
-                             params: ActParams(p_target: target, p_action: action))
+                             params: ActParams(p_target: target, p_action: action, p_note: note))
             .execute().value
     }
 

@@ -45,6 +45,8 @@ final class AppState: ObservableObject {
     @Published var likesRemaining = 5
     /// Set when a like creates a mutual match — drives the "It's a match" moment.
     @Published var matchedMember: Member?
+    /// Set while composing a greeting for a like — drives the like composer.
+    @Published var pendingLike: Member?
 
     /// Everyone we've seen this session (feed, likers, matches), by id.
     @Published var knownMembers: [String: Member] = [:]
@@ -447,13 +449,32 @@ final class AppState: ObservableObject {
         Task { _ = try? await SupabaseService.actOnProfile(uuid, action: "pass") }
     }
 
-    func likeMember(_ id: String) {
+    /// Open the greeting composer for a like (the Explore deck flow).
+    func beginLike(_ id: String) {
+        guard likesRemaining > 0, !likedIDs.contains(id), let m = member(id) else { return }
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.85)) { pendingLike = m }
+    }
+
+    func cancelLike() {
+        withAnimation(.easeOut(duration: 0.25)) { pendingLike = nil }
+    }
+
+    /// Confirm the like with an optional greeting note.
+    func confirmLike(note: String) {
+        guard let m = pendingLike else { return }
+        withAnimation(.easeOut(duration: 0.25)) { pendingLike = nil }
+        likeMember(m.id, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    /// Record a like (optionally with a greeting) and surface a match if mutual.
+    func likeMember(_ id: String, note: String = "") {
         guard likesRemaining > 0, !likedIDs.contains(id) else { return }
         withAnimation(.easeOut(duration: 0.28)) { _ = likedIDs.insert(id) }
         likesRemaining -= 1
         guard !isPreview, let uuid = UUID(uuidString: id) else { return }
+        let greeting = note.isEmpty ? nil : note
         Task {
-            if let result = try? await SupabaseService.actOnProfile(uuid, action: "like") {
+            if let result = try? await SupabaseService.actOnProfile(uuid, action: "like", note: greeting) {
                 likesRemaining = result.likes_remaining
                 if result.matched {
                     await refreshConversations()
