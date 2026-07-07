@@ -17,6 +17,7 @@ struct ProfileRow: Codable {
     var name: String
     var birthdate: String?        // 'yyyy-MM-dd'
     var pronouns: String?
+    var seeking: String?
     var city: String?
     var work: String?
     var bio: String

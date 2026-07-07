@@ -254,6 +254,7 @@ final class AppState: ObservableObject {
     private func apply(_ row: ProfileRow) {
         profile.name = row.name
         profile.pronouns = row.pronouns ?? ""
+        profile.seeking = row.seeking ?? ""
         profile.city = row.city ?? ""
         profile.work = row.work ?? ""
         profile.bio = row.bio
@@ -568,6 +569,7 @@ final class AppState: ObservableObject {
             name: profile.name,
             birthdate: birthdate,
             pronouns: profile.pronouns.isEmpty ? nil : profile.pronouns,
+            seeking: profile.seeking.isEmpty ? nil : profile.seeking,
             city: profile.city.isEmpty ? nil : profile.city,
             work: profile.work.isEmpty ? nil : profile.work,
             bio: profile.bio.trimmingCharacters(in: .whitespacesAndNewlines),
