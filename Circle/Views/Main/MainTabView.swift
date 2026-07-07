@@ -28,6 +28,12 @@ struct MainTabView: View {
             .transition(.opacity)
 
             GlassTabBar()
+
+            if let matched = app.matchedMember {
+                MatchMoment(member: matched)
+                    .transition(.opacity)
+                    .zIndex(10)
+            }
         }
         .fullScreenCover(item: $app.activeSheet) { sheet in
             switch sheet {

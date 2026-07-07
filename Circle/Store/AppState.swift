@@ -42,6 +42,8 @@ final class AppState: ObservableObject {
     @Published var passedIDs: Set<String> = []
     @Published var likedIDs: Set<String> = []
     @Published var likesRemaining = 5
+    /// Set when a like creates a mutual match — drives the "It's a match" moment.
+    @Published var matchedMember: Member?
 
     /// Everyone we've seen this session (feed, likers, matches), by id.
     @Published var knownMembers: [String: Member] = [:]
@@ -441,10 +443,26 @@ final class AppState: ObservableObject {
                 likesRemaining = result.likes_remaining
                 if result.matched {
                     await refreshConversations()
-                    tab = .messages
+                    // Surface the moment instead of silently jumping to chat.
+                    if let m = member(id) {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            matchedMember = m
+                        }
+                    }
                 }
             }
         }
+    }
+
+    /// Open the conversation with the just-matched person, dismissing the moment.
+    func messageMatch() {
+        guard let id = matchedMember?.id else { return }
+        matchedMember = nil
+        activeSheet = .chat(id)
+    }
+
+    func dismissMatch() {
+        withAnimation(.easeOut(duration: 0.3)) { matchedMember = nil }
     }
 
     func resetDeck() {
