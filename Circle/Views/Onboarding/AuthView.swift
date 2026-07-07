@@ -202,7 +202,7 @@ private struct FloatingChip: View {
 private struct PhoneAuthSheet: View {
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
-    @State private var phone = ""
+    @State private var phone = "+91 "
     @State private var code = ""
     @State private var codeSent = false
     @FocusState private var focused: Bool
@@ -223,7 +223,7 @@ private struct PhoneAuthSheet: View {
 
             Text(codeSent
                  ? "We texted a 6-digit code to \(phone)."
-                 : "Include your country code, e.g. +91 98765 43210.")
+                 : "We’ll text a 6-digit code to verify this number.")
                 .font(.grotesk(14)).foregroundStyle(CT.bodyLight).lineSpacing(3)
                 .padding(.top, 10)
 

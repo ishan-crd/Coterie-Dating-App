@@ -102,7 +102,13 @@ enum SupabaseService {
 
     static let client = SupabaseClient(
         supabaseURL: URL(string: "https://zkoweftcxxnmytnezmcf.supabase.co")!,
-        supabaseKey: "sb_publishable_BynEdOOK5aRPlsTAjXwCGA_R3SD3ZoS"
+        supabaseKey: "sb_publishable_BynEdOOK5aRPlsTAjXwCGA_R3SD3ZoS",
+        options: SupabaseClientOptions(
+            // Opt in to the upcoming behavior: emit the locally stored session
+            // immediately. We read `currentSession` directly (and guard on
+            // `isExpired` in bootstrap), so this is safe.
+            auth: .init(emitLocalSessionAsInitialSession: true)
+        )
     )
 
     static var auth: AuthClient { client.auth }

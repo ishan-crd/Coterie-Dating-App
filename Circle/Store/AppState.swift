@@ -83,10 +83,18 @@ final class AppState: ObservableObject {
 
     /// Decide the entry stage from the current auth session.
     private func bootstrap() async {
-        if SupabaseService.auth.currentSession == nil {
-            stage = .auth
-        } else {
+        let session = SupabaseService.auth.currentSession
+        if let session, !session.isExpired {
             await enterSignedIn()
+        } else if session != nil {
+            // Stored session exists but is expired — try a refresh before giving up.
+            if (try? await SupabaseService.auth.refreshSession()) != nil {
+                await enterSignedIn()
+            } else {
+                stage = .auth
+            }
+        } else {
+            stage = .auth
         }
     }
 
