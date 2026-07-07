@@ -237,9 +237,18 @@ struct ProfilePhoto<Placeholder: View>: View {
 
     var body: some View {
         if let data, let image = DecodedImageCache.image(for: data) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
+            // Color.clear takes the size the caller's frame proposes; the image
+            // fills it as an overlay and is clipped. Because the image lives in
+            // an overlay, its (huge) intrinsic size never leaks into layout —
+            // this is what keeps a real photo from blowing out its container.
+            Color.clear
+                .overlay(
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                )
+                .clipped()
+                .contentShape(Rectangle())
         } else {
             placeholder()
         }
