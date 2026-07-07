@@ -23,6 +23,11 @@ struct ProfileRow: Codable {
     var onboarding_complete: Bool
     var paused: Bool
     var notifications: Bool
+    /// Non-nil ⇒ the account is deactivated (soft-deleted). Defaults nil, so a
+    /// profile save always writes `deleted_at = null` — harmless for active
+    /// users and a backstop reactivation for a returning one. Deactivation is
+    /// done server-side by the `deactivate_account` RPC, never from here.
+    var deleted_at: String? = nil
 }
 
 struct InterestRow: Codable {
@@ -144,6 +149,30 @@ enum SupabaseService {
 
     static func signOut() async {
         try? await auth.signOut()
+    }
+
+    // MARK: Account deactivation (soft delete)
+
+    /// Wipe onboarding data and mark the account deactivated. The auth user and
+    /// the profile row are preserved (Apple only yields its token once).
+    static func deactivateAccount() async throws {
+        try await client.rpc("deactivate_account").execute()
+    }
+
+    /// Clear the deactivation marker on a returning user.
+    static func reactivateAccount() async throws {
+        try await client.rpc("reactivate_account").execute()
+    }
+
+    /// Remove every uploaded photo of the current user from the storage bucket.
+    static func deleteAllOwnPhotos() async throws {
+        guard let uid = userID else { return }
+        let folder = uid.uuidString.lowercased()
+        let files = try await client.storage.from("photos").list(path: folder)
+        let paths = files.map { "\(folder)/\($0.name)" }
+        if !paths.isEmpty {
+            try? await client.storage.from("photos").remove(paths: paths)
+        }
     }
 
     // MARK: Vocabularies

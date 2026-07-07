@@ -219,6 +219,11 @@ final class AppState: ObservableObject {
         await loadVocabularies()
         do {
             let row = try await SupabaseService.fetchOwnProfile()
+            // A returning, previously-deactivated user: clear the marker and
+            // send them through onboarding fresh (their data was wiped).
+            if !isPreview, let row, row.deleted_at != nil {
+                try? await SupabaseService.reactivateAccount()
+            }
             if let row, row.onboarding_complete {
                 apply(row)
                 await loadOwnExtras()
@@ -711,6 +716,19 @@ final class AppState: ObservableObject {
     }
 
     // MARK: - Account
+
+    /// Deactivate (soft-delete) the account: wipe onboarding data server-side,
+    /// keep the auth user + row (Apple token is one-shot), then sign out. A
+    /// later sign-in reactivates and re-onboards. See `deactivateAccount`.
+    func deleteAccount() {
+        Task {
+            if !isPreview {
+                try? await SupabaseService.deleteAllOwnPhotos()
+                try? await SupabaseService.deactivateAccount()
+            }
+            logout()
+        }
+    }
 
     func logout() {
         realtimeTask?.cancel()

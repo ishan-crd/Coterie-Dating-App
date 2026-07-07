@@ -10,6 +10,7 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var app: AppState
     private var p: UserProfile { app.profile }
+    @State private var showDeleteConfirm = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -30,6 +31,18 @@ struct ProfileView: View {
 
                 PillButton(title: "Log Out", style: .outline) { app.logout() }
                     .padding(.top, 30)
+
+                Button { showDeleteConfirm = true } label: {
+                    Text("Delete Account")
+                        .font(.grotesk(13, weight: .medium))
+                        .foregroundStyle(CT.accent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 8)
+
                 Text("Circle · Find your people")
                     .font(.grotesk(11)).tracking(2.0).textCase(.uppercase)
                     .foregroundStyle(CT.fainter)
@@ -40,6 +53,12 @@ struct ProfileView: View {
             .padding(.bottom, 110)
         }
         .safeAreaPadding(.top, 8)
+        .alert("Delete your account?", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete Account", role: .destructive) { app.deleteAccount() }
+        } message: {
+            Text("This permanently clears your profile, photos, prompts and interests. You can sign back in anytime to start over. Are you sure?")
+        }
     }
 
     // MARK: Header & portrait
