@@ -43,6 +43,9 @@ struct EditProfileView: View {
                     label("Work").padding(.top, 28)
                     UnderlineField(placeholder: "e.g. Architect, Writer, Founder", text: app.bind(\.work), fontSize: 24)
 
+                    label("About").padding(.top, 28)
+                    BioField(text: app.bind(\.bio))
+
                     label("Your prompts").padding(.top, 28)
                     PromptComposer()
 

@@ -323,6 +323,11 @@ private struct AboutStep: View {
             chipGroup("Interested in meeting", options: CTData.seeking,
                       isOn: { app.profile.seeking == $0 },
                       tap: { app.profile.seeking = $0 })
+
+            VStack(alignment: .leading, spacing: 14) {
+                Text("A little about you").eyebrow(CT.muted, tracking: 2.2)
+                BioField(text: app.bind(\.bio))
+            }
         }
     }
 

@@ -71,6 +71,8 @@ struct UserProfile: Codable, Equatable {
     var seeking = ""
     var city = ""
     var work = ""
+    /// Short free-text "About" blurb shown on the user's profile.
+    var bio = ""
     /// Up to three chosen prompts and their answers.
     var prompts: [PromptResponse] = []
     var interests: [String] = []

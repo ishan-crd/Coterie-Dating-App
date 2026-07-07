@@ -200,6 +200,7 @@ final class AppState: ObservableObject {
         profile.pronouns = row.pronouns ?? ""
         profile.city = row.city ?? ""
         profile.work = row.work ?? ""
+        profile.bio = row.bio
         if let b = row.birthdate, b.count == 10 {
             let parts = b.split(separator: "-")
             if parts.count == 3 {
@@ -468,7 +469,7 @@ final class AppState: ObservableObject {
             pronouns: profile.pronouns.isEmpty ? nil : profile.pronouns,
             city: profile.city.isEmpty ? nil : profile.city,
             work: profile.work.isEmpty ? nil : profile.work,
-            bio: "",
+            bio: profile.bio.trimmingCharacters(in: .whitespacesAndNewlines),
             onboarding_complete: markComplete,
             paused: paused,
             notifications: notifications

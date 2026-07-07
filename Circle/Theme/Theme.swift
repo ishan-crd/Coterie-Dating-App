@@ -396,3 +396,31 @@ struct UnderlineField: View {
         }
     }
 }
+
+/// Multiline free-text field for a short "About" blurb. Optional by design.
+struct BioField: View {
+    @Binding var text: String
+    var placeholder: String = "Share a few sentences — what you’re into, what you’re looking for in a friend."
+    var limit: Int = 300
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            TextField(placeholder, text: $text, axis: .vertical)
+                .font(.serif(19))
+                .foregroundStyle(CT.ink)
+                .tint(CT.accent)
+                .lineSpacing(4)
+                .lineLimit(3...6)
+                .autocorrectionDisabled(false)
+                .onChange(of: text) { _, v in
+                    if v.count > limit { text = String(v.prefix(limit)) }
+                }
+                .padding(14)
+                .background(CT.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(CT.border, lineWidth: 1))
+            Text("\(text.count)/\(limit)")
+                .font(.grotesk(11)).foregroundStyle(CT.faint)
+        }
+    }
+}
