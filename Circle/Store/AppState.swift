@@ -54,7 +54,6 @@ final class AppState: ObservableObject {
     // MARK: Conversations (built from matches + messages)
     @Published var conversations: [String: Conversation] = [:]   // key: other user id
     @Published var conversationOrder: [String] = []
-    @Published var typing = false                                 // legacy; unused with real chat
     private var matchIDs: [String: UUID] = [:]                    // other user id → match id
 
     // MARK: Sheets

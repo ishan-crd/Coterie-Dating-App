@@ -262,11 +262,4 @@ enum CTData {
         .init(id: "theo", note: "Anyone who’d rather make than buy has my attention.", time: "Yesterday"),
         .init(id: "cyrus", note: "We seem to keep almost crossing paths. Hello.", time: "2d"),
     ]
-
-    static let replyPool = [
-        "That made me smile.",
-        "Tell me more — I’m intrigued.",
-        "I had a feeling we’d get along.",
-        "Then it’s settled. When are you free?",
-    ]
 }

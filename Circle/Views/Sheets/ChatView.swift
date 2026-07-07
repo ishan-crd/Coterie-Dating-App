@@ -2,7 +2,8 @@
 //  ChatView.swift
 //  Circle
 //
-//  A one-to-one conversation, with a composer and a simulated reply.
+//  A one-to-one conversation, with a composer, backed by live Supabase
+//  messaging (send persists; incoming messages arrive over realtime).
 //
 
 import SwiftUI
@@ -70,7 +71,6 @@ struct ChatView: View {
                     ForEach(convo?.messages ?? []) { msg in
                         bubble(msg).id(msg.id)
                     }
-                    if app.typing { typingBubble.id("typing") }
                 }
                 .padding(.horizontal, 18).padding(.top, 20).padding(.bottom, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -79,9 +79,6 @@ struct ChatView: View {
                 if let last = convo?.messages.last {
                     withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
-            }
-            .onChange(of: app.typing) { _, t in
-                if t { withAnimation { proxy.scrollTo("typing", anchor: .bottom) } }
             }
         }
     }
@@ -96,16 +93,6 @@ struct ChatView: View {
                 .background(msg.fromMe ? CT.accent : CT.bubbleThem)
                 .clipShape(BubbleShape(fromMe: msg.fromMe))
             if !msg.fromMe { Spacer(minLength: 50) }
-        }
-    }
-
-    private var typingBubble: some View {
-        HStack {
-            TypingDots()
-                .padding(.horizontal, 16).padding(.vertical, 14)
-                .background(CT.bubbleThem)
-                .clipShape(BubbleShape(fromMe: false))
-            Spacer(minLength: 50)
         }
     }
 
@@ -152,22 +139,5 @@ private struct BubbleShape: Shape {
         let bl = fromMe ? big : small
         return Path(roundedRect: rect, cornerRadii: RectangleCornerRadii(
             topLeading: tl, bottomLeading: bl, bottomTrailing: br, topTrailing: tr))
-    }
-}
-
-// MARK: - Typing indicator
-
-private struct TypingDots: View {
-    @State private var phase = false
-    var body: some View {
-        HStack(spacing: 5) {
-            ForEach(0..<3, id: \.self) { i in
-                Circle().fill(CT.muted).frame(width: 6, height: 6)
-                    .offset(y: phase ? -3 : 0)
-                    .animation(.easeInOut(duration: 0.65).repeatForever().delay(Double(i) * 0.2),
-                               value: phase)
-            }
-        }
-        .onAppear { phase = true }
     }
 }
