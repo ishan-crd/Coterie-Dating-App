@@ -103,9 +103,7 @@ final class AppState: ObservableObject {
     func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
         switch result {
         case .failure(let error):
-            if (error as? ASAuthorizationError)?.code != .canceled {
-                authError = error.localizedDescription
-            }
+            authError = friendlyAuthError(error)
         case .success(let authorization):
             guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
                   let tokenData = credential.identityToken,
@@ -138,7 +136,7 @@ final class AppState: ObservableObject {
                 onSent()
             } catch {
                 authBusy = false
-                authError = friendlyAuthError(error)
+                if let msg = friendlyAuthError(error) { authError = msg }
             }
         }
     }
@@ -154,7 +152,7 @@ final class AppState: ObservableObject {
                 await enterSignedIn()
             } catch {
                 authBusy = false
-                authError = friendlyAuthError(error)
+                if let msg = friendlyAuthError(error) { authError = msg }
             }
         }
     }
@@ -169,15 +167,47 @@ final class AppState: ObservableObject {
                 await enterSignedIn()
             } catch {
                 authBusy = false
-                authError = friendlyAuthError(error)
+                if let msg = friendlyAuthError(error) { authError = msg }
             }
         }
     }
 
-    private func friendlyAuthError(_ error: Error) -> String {
-        let text = error.localizedDescription
-        if text.localizedCaseInsensitiveContains("cancel") { return "Sign-in was cancelled." }
-        return text
+    /// Maps any auth error to a short, human message. Returns `nil` when the
+    /// user simply cancelled (nothing worth showing). Never surfaces raw
+    /// technical codes / domains to the UI.
+    private func friendlyAuthError(_ error: Error) -> String? {
+        let ns = error as NSError
+
+        // User-initiated cancellations → stay silent.
+        if (error as? ASAuthorizationError)?.code == .canceled { return nil }
+        let text = error.localizedDescription.lowercased()
+        if text.contains("cancel") { return nil }
+
+        func has(_ needles: String...) -> Bool { needles.contains { text.contains($0) } }
+
+        // No connectivity.
+        if ns.domain == NSURLErrorDomain || has("offline", "internet", "network connection", "connection appears") {
+            return "You appear to be offline. Check your connection and try again."
+        }
+        // Wrong / expired verification code.
+        if has("invalid", "incorrect", "expired", "token has expired", "otp") {
+            return "That code is invalid or has expired. Request a new one."
+        }
+        // Too many requests.
+        if has("rate limit", "too many", "429") {
+            return "Too many attempts. Please wait a moment and try again."
+        }
+        // Bad email address.
+        if has("email") && has("invalid", "valid") {
+            return "That email address doesn’t look right."
+        }
+        // Apple authorization failures (e.g. not signed into iCloud on device).
+        if error is ASAuthorizationError || ns.domain.contains("AuthenticationServices") {
+            return "Apple Sign-In couldn’t be completed. Please try again."
+        }
+
+        // Anything else — a single, calm fallback.
+        return "Something went wrong. Please try again."
     }
 
     /// After any successful sign-in: load vocab + profile, then route.

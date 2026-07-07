@@ -15,14 +15,14 @@
 - **Name:** Circle (display name `Circle`; the Xcode project, target, and folder are all `Circle`).
 - **Tagline:** "Find friends who share your world."
 - **Core loop:** A user onboards (builds a profile of name, age, photos, city, work, prompts, interests), then on the **Explore / Today** page sees other people one at a time as a full scrolling profile. They **pass (✕)** or **like (♥)**. Likes are capped at **5 per day**. Liking someone starts a conversation that appears in **Messages**.
-- **Entry gate:** Real auth via `AuthView` — Sign in with Apple (native), Google (OAuth) and phone OTP through Supabase Auth. No invite gate.
+- **Entry gate:** Real auth via `AuthView` — Sign in with Apple (native), Google (native) and email OTP through Supabase Auth. No invite gate.
 - **Theme:** Warm editorial design (serif display type + grotesk body) on a paper background, with a warm orange accent. Full light/dark support; **defaults to System theme**.
 
 ### Current state / maturity
 - The app is **fully wired to the live Supabase backend** (§8) via `Store/SupabaseService.swift`: real auth, real profiles, real discovery/likes/matches, real chat with realtime, real photo upload/download.
 - **User photos are real uploads** — `PhotosPicker` → downscaled JPEG `Data` in local slots → uploaded to the `photos` bucket on onboarding-complete / edit-save; other people's photos are downloaded from the bucket and cached in `AppState.memberPhotos`. `PortraitGradient` remains as the placeholder for members with no photos.
 - `CTData` is now only a **fallback vocabulary + DEBUG preview seed** (`-previewApp` etc. run fully offline).
-- **Provider setup still needed in dashboards** (user-side): Apple (bundle id in Supabase Apple provider + Sign in with Apple capability on the App ID), Google (iOS OAuth client + redirect URL `circleapp://auth-callback` in Supabase URL config), phone (SMS provider like Twilio in Supabase Auth).
+- **Provider setup still needed in dashboards** (user-side): Apple (bundle id in Supabase Apple provider + Sign in with Apple capability on the App ID), Google (iOS OAuth client + "Skip nonce checks" in Supabase Google provider), email OTP (Send Email Hook + Resend — see §8 Auth; verify the sending domain in Resend, set the three edge-function secrets, OTP length = 6).
 
 ---
 
@@ -267,7 +267,16 @@ Currently everything is local `UserDefaults` JSON:
 The backend is **built and live** on Supabase (project url `https://zkoweftcxxnmytnezmcf.supabase.co`). Postgres schema + RLS + RPCs + storage + realtime are all applied via migrations (`core_schema`, `interactions_matching_messaging`, `rls_policies`, `storage_and_realtime`, `seed_vocabularies`, `advisor_fixes`, `function_grants_lockdown`). **The iOS app IS wired to it** via `Store/SupabaseService.swift` (supabase-swift SPM package, publishable key baked in): auth (`AuthView` — Apple id-token / Google OAuth / phone OTP), profile sync (`pushProfile` on onboarding-complete & edit-save, photos uploaded to the bucket from dirty slots), discovery (`refreshFeed` → `get_discovery_feed`), like/pass (`act_on_profile`), likers (`get_likers`), matches+messages (`refreshConversations` + realtime channel on `messages` inserts). `CTData` remains only as vocab fallback and DEBUG preview seed (`-previewApp`/`-previewOnboarding`/`-previewAuth` skip networking entirely).
 
 ### Auth
-Supabase Auth. Use **Google / Apple sign-in** (configure providers in dashboard → Authentication → Providers; no invite gate). On signup, a DB trigger (`handle_new_user`) auto-creates a `profiles` row, pre-filling `name` from the OAuth `full_name`.
+Supabase Auth. Three methods in `AuthView`: **Apple** (native id-token), **Google** (native GoogleSignIn id-token), and **Email OTP** (`EmailAuthSheet`). No invite gate. On signup, a DB trigger (`handle_new_user`, on `auth.users`) auto-creates a `profiles` row (`onboarding_complete = false`), pre-filling `name` from the OAuth `full_name` when present. New users route to onboarding; returning users (`onboarding_complete = true`) go straight to the app.
+
+#### Email OTP + Resend (branded verification email)
+Email sign-in uses `signInWithOTP(email:, shouldCreateUser: true)` → `verifyOTP(type: .email)`. Verifying a code for a new email **creates the account** on the spot. Requirements:
+- **Email OTP length must be 6** (Auth → Providers → Email). The app's `EmailAuthSheet` caps input at 6 digits — an 8-digit code cannot be entered.
+- Delivery is handled by a **Send Email Hook** (Auth → Hooks, type HTTPS) pointing at the edge function `send-auth-email` (`supabase/functions/send-auth-email/index.ts`, deployed with `verify_jwt = false`). It verifies the Standard-Webhooks signature, then sends a branded Circle email (Cormorant Garamond + Hanken Grotesk, app palette) via the **Resend** API. While the hook is enabled, Supabase's built-in email templates are bypassed.
+- **Edge-function secrets** (set in dashboard → Edge Functions → Secrets; never in code):
+  `RESEND_API_KEY`, `SEND_EMAIL_HOOK_SECRET` (the `v1,whsec_…` shown when the hook is created), `AUTH_EMAIL_FROM` (e.g. `Circle <noreply@insyd.in>` — the domain must be verified in Resend).
+- **Raise the email rate limit** (Auth → Rate Limits) off the 2/hour default — that cap protected Supabase's shared email, which the Resend hook no longer uses.
+- Frontend auth errors are funneled through `AppState.friendlyAuthError(_:)`, which maps everything to short human messages (and stays silent on user cancellation) — raw error codes/domains never reach the UI.
 
 ### Tables (schema `public`, all with RLS)
 | Table | Purpose | Key columns / rules |
